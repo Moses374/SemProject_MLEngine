@@ -10,7 +10,6 @@ import sys
 
 import joblib
 import numpy as np
-from sklearn.tree import export_text
 
 DEFAULT_MODELS = ["models/activity_model.joblib", "models/demo_model.joblib"]
 
@@ -27,18 +26,18 @@ def summarize(path: str) -> str:
         out.append(f"Trained WITHOUT these subjects (kept for honest testing): {bundle['test_users']}")
     else:
         out.append("Trained on all 36 subjects (the deployment model).")
-    if hasattr(model, "estimators_"):
-        trees = model.estimators_
+    if hasattr(model, "trees_"):
+        trees = model.trees_
         out += ["",
                 f"Random forest of {len(trees)} decision trees",
-                f"  average depth {np.mean([t.get_depth() for t in trees]):.1f} levels, "
-                f"average {np.mean([t.get_n_leaves() for t in trees]):.0f} end points per tree",
-                f"  {sum(t.tree_.node_count for t in trees):,} nodes in total (this is the 'knowledge' in the file)",
+                f"  average depth {np.mean([t.depth_ for t in trees]):.1f} levels, "
+                f"average {np.mean([t.n_leaves for t in trees]):.0f} end points per tree",
+                f"  {sum(t.node_count for t in trees):,} nodes in total (this is the 'knowledge' in the file)",
                 "", "Most important features (share of the forest's decisions):"]
         order = np.argsort(model.feature_importances_)[::-1][:10]
         out += [f"  {names[i]:<12} {model.feature_importances_[i]:.3f}" for i in order]
         out += ["", "Top of the first tree (the real questions the model asks, 3 levels deep):",
-                export_text(trees[0], feature_names=list(names), class_names=[str(c) for c in model.classes_], max_depth=3)]
+                trees[0].to_text(names, [str(c) for c in model.classes_], max_depth=3)]
     return "\n".join(out)
 
 

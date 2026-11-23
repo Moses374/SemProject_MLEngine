@@ -41,7 +41,8 @@ The `mlengine/` package turns the raw accelerometer stream into an activity clas
 |---|---|
 | `mlengine/data.py` | Load the raw file; drop malformed rows, NaNs, zero timestamps and duplicates |
 | `mlengine/features.py` | 4 s sliding windows (80 samples, 50% overlap), 32 time/frequency features per window, fall-risk rule |
-| `mlengine/train.py` | Train baseline, logistic regression and random forest; evaluate; save model and reports |
+| `mlengine/models.py` | Our own NumPy implementations: majority baseline, softmax (multinomial logistic) regression, CART decision tree and random forest |
+| `mlengine/train.py` | Train our baseline, logistic regression and random forest, plus scikit-learn's versions as a reference; evaluate; save model and reports |
 | `mlengine/predict.py` | Classify one 80-sample window and report fall risk |
 | `mlengine/describe.py` | Show what is inside the saved model files (they are binary) |
 | `mlengine/demo.py` | Local web demo (page in `mlengine/demo_page.html`) |
@@ -84,15 +85,17 @@ An app-style demo with two phone screens. Mary's phone names her current activit
 
 Evaluation holds out whole subjects (25% of the 36), so scores reflect performance on people the model has never seen. Windows from one person never appear in both train and test.
 
-| Model | Accuracy | Macro F1 |
-|---|---|---|
-| Majority-class baseline | 0.391 | 0.094 |
-| Logistic regression | 0.829 | 0.749 |
-| **Random forest** | **0.849** | **0.775** |
+The classifiers are implemented from scratch in `mlengine/models.py`. scikit-learn's versions are trained on the same split only to check our implementations against.
 
-Random forest 5-fold subject-wise CV macro-F1: 0.791 +/- 0.035. Plots are in `reports/` (`confusion_matrix.png`, `feature_importance.png`) and metrics in `reports/metrics.json`.
+| Model | Accuracy | Macro F1 | scikit-learn reference (acc / macro F1) |
+|---|---|---|---|
+| Majority-class baseline | 0.391 | 0.094 | |
+| Logistic regression | 0.829 | 0.747 | 0.830 / 0.750 |
+| **Random forest** (300 trees) | **0.850** | **0.778** | 0.849 / 0.775 |
 
-Jogging and Walking are classified well (F1 0.96 and 0.91). Downstairs is the weak class (recall 0.34) and is mostly confused with Upstairs and Walking, which is typical for waist/pocket accelerometer data. Sitting and Standing are separated mainly by the phone's orientation (gravity on each axis).
+Random forest 5-fold subject-wise CV macro-F1: 0.791 +/- 0.036. Plots are in `reports/` (`confusion_matrix.png`, `feature_importance.png`) and metrics in `reports/metrics.json`.
+
+Jogging and Walking are classified well (F1 0.97 and 0.91). Downstairs is the weak class (recall 0.37) and is mostly confused with Upstairs and Walking, which is typical for waist/pocket accelerometer data. Sitting and Standing are separated mainly by the phone's orientation (gravity on each axis).
 
 ### Limitations
 
