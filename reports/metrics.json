@@ -1,0 +1,22 @@
+{
+  "best": "random forest",
+  "results": {
+    "baseline (majority)": {
+      "accuracy": 0.3910511798958014,
+      "macro_f1": 0.0937063964162444
+    },
+    "logistic regression": {
+      "accuracy": 0.829451425068955,
+      "macro_f1": 0.7488037657076702
+    },
+    "random forest": {
+      "accuracy": 0.8493717437940546,
+      "macro_f1": 0.7749917420184286
+    },
+    "random forest 5-fold subject-wise CV": {
+      "macro_f1_mean": 0.7914428206191287,
+      "macro_f1_std": 0.035196531000158265
+    }
+  },
+  "report": "              precision    recall  f1-score   support\n\n  Downstairs       0.78      0.34      0.48       676\n     Jogging       0.96      0.97      0.96      1832\n     Sitting       0.76      0.80      0.78       255\n    Standing       0.78      0.81      0.80       225\n    Upstairs       0.61      0.86      0.72       986\n     Walking       0.92      0.90      0.91      2552\n\n    accuracy                           0.85      6526\n   macro avg       0.80      0.78      0.77      6526\nweighted avg       0.86      0.85      0.84      6526\n"
+}

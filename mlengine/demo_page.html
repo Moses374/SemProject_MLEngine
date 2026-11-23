@@ -1,0 +1,375 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Safe Steps</title>
+<style>
+  :root {
+    --bg:#e8edf4; --ink:#101828; --mute:#667085; --card:#ffffff; --app:#f4f6fa; --line:#e4e7ec;
+    --teal:#0f9d8a; --teal-soft:#d9f3ee; --red:#d92d20; --red-soft:#fee4e2; --amber:#b54708; --amber-soft:#fef0c7;
+    --blue:#2563eb; --shadow:0 6px 20px rgba(16,24,40,.10);
+  }
+  * { box-sizing:border-box; }
+  html, body { height:100%; }
+  body { margin:0; background:var(--bg); color:var(--ink);
+         font-family:"Segoe UI", system-ui, -apple-system, Roboto, Helvetica, Arial, sans-serif; overflow:hidden; }
+  button { font:inherit; cursor:pointer; }
+  button:focus-visible { outline:3px solid var(--blue); outline-offset:2px; }
+
+  /* ---------- presenter bar ---------- */
+  .bar { position:fixed; top:0; left:0; right:0; z-index:20; display:flex; flex-wrap:wrap; gap:6px; align-items:center;
+         padding:8px 14px; background:#101828; color:#fff; font-size:14px; }
+  .bar .lbl { opacity:.7; margin-right:4px; }
+  .bar button { background:#1d2939; color:#fff; border:1px solid #344054; border-radius:999px; padding:5px 12px; font-size:14px; }
+  .bar button:hover { background:#344054; }
+  .bar button.fall { background:#7a271a; border-color:#b42318; }
+  .bar button.play { background:var(--teal); border-color:var(--teal); font-weight:600; }
+  .bar button:disabled { opacity:.4; cursor:not-allowed; }
+  .bar label { display:flex; align-items:center; gap:6px; margin-left:auto; cursor:pointer; }
+  .bar .sp { flex:1; }
+
+  /* ---------- stage ---------- */
+  #viewport { position:absolute; top:48px; left:0; right:0; bottom:0; overflow:hidden; }
+  #stage { position:absolute; left:50%; top:0; transform-origin:top center; display:flex; gap:26px; padding:18px 20px;
+           align-items:flex-start; }
+  .tech { width:470px; background:var(--card); border-radius:18px; box-shadow:var(--shadow); padding:16px; display:none; }
+  body.showtech .tech { display:block; }
+  .tech h3 { margin:0 0 6px; font-size:16px; }
+  .tech canvas { width:100%; display:block; border-bottom:1px solid var(--line); margin-bottom:10px; }
+  .tech .cap { font-size:12px; color:var(--mute); margin:-4px 0 10px; }
+  .prow { display:flex; align-items:center; gap:8px; font-size:13px; margin:3px 0; }
+  .prow .n { width:84px; } .prow .b { flex:1; height:10px; background:#eef1f6; border-radius:5px; overflow:hidden; }
+  .prow .b div { height:100%; background:#98a2b3; } .prow .b div.top { background:var(--teal); }
+  .prow .p { width:38px; text-align:right; color:var(--mute); }
+  .tech .kv { font-size:13px; line-height:1.5; }
+
+  .col { width:350px; }
+  .col > h2 { margin:0 0 8px; text-align:center; font-size:15px; color:var(--mute); font-weight:600; letter-spacing:.2px; }
+  .phone { width:350px; height:640px; border-radius:44px; background:#0b0f19; padding:10px; box-shadow:0 18px 40px rgba(16,24,40,.28);
+           position:relative; }
+  .screen { position:relative; width:100%; height:100%; border-radius:34px; background:var(--app); overflow:hidden;
+            display:flex; flex-direction:column; }
+  .notch { position:absolute; top:7px; left:50%; width:96px; height:24px; background:#0b0f19; border-radius:14px; transform:translateX(-50%); z-index:12; }
+  .sbar { display:flex; justify-content:space-between; padding:12px 24px 0; font-size:13px; font-weight:600; height:36px; }
+  .appbar { display:flex; align-items:center; gap:10px; padding:10px 18px 6px; }
+  .logo { width:34px; height:34px; border-radius:10px; background:var(--teal); color:#fff; display:grid; place-items:center; font-weight:700; }
+  .appbar .t { font-weight:700; font-size:17px; line-height:1.1; } .appbar .s { font-size:12px; color:var(--mute); }
+  .pill { margin-left:auto; font-size:12px; font-weight:600; padding:4px 10px; border-radius:999px; background:var(--teal-soft); color:#065f46; display:flex; align-items:center; gap:6px; }
+  .pill i { width:8px; height:8px; border-radius:50%; background:var(--teal); animation:pulse 1.6s infinite; }
+  @keyframes pulse { 0%{box-shadow:0 0 0 0 rgba(15,157,138,.5);} 100%{box-shadow:0 0 0 8px rgba(15,157,138,0);} }
+  .body { padding:4px 16px 14px; flex:1; overflow:hidden; display:flex; flex-direction:column; gap:10px; }
+  .card { background:var(--card); border-radius:20px; padding:14px 16px; box-shadow:0 1px 3px rgba(16,24,40,.08); }
+  .card h4 { margin:0 0 8px; font-size:13px; color:var(--mute); font-weight:600; text-transform:uppercase; letter-spacing:.5px; }
+
+  .status { text-align:center; padding:12px 12px 12px; transition:background .3s; }
+  .ring { width:92px; height:92px; margin:0 auto 6px; border-radius:50%; display:grid; place-items:center; font-size:42px;
+          background:var(--teal-soft); border:5px solid var(--teal); transition:all .3s; }
+  .status .big { font-size:24px; font-weight:700; line-height:1.15; }
+  .status .sub { color:var(--mute); font-size:14px; margin-top:2px; }
+  .conf { display:inline-block; margin-top:8px; font-size:12px; font-weight:600; padding:3px 10px; border-radius:999px; background:#eef1f6; color:#344054; }
+  #mini { width:100%; height:52px; display:block; }
+  .seg { display:flex; height:16px; border-radius:8px; overflow:hidden; background:#eef1f6; }
+  .seg div { height:100%; transition:width .5s; }
+  .split { display:flex; justify-content:space-between; font-size:13px; margin-top:8px; color:#344054; }
+  .sos { margin-top:auto; border:0; border-radius:16px; background:var(--red); color:#fff; font-weight:700; font-size:17px; padding:13px; flex:none; }
+
+  /* fall overlay on wearer phone */
+  .fallov { position:absolute; inset:0; z-index:8; background:var(--red); color:#fff; display:none; flex-direction:column; align-items:center;
+            justify-content:center; text-align:center; padding:30px 24px; gap:10px; }
+  .fallov.on { display:flex; animation:shake .5s 2; }
+  @keyframes shake { 0%,100%{transform:translateX(0);} 25%{transform:translateX(-8px);} 75%{transform:translateX(8px);} }
+  .fallov h3 { margin:0; font-size:32px; } .fallov p { margin:0; font-size:17px; opacity:.95; }
+  .count { width:132px; height:132px; border-radius:50%; border:6px solid #fff; display:grid; place-items:center; font-size:60px; font-weight:700; margin:10px 0; }
+  .fallov .btns { width:100%; display:flex; flex-direction:column; gap:10px; margin-top:6px; }
+  .fallov button { border-radius:16px; border:0; padding:15px; font-size:18px; font-weight:700; }
+  .fallov .ok { background:#fff; color:#065f46; } .fallov .help { background:#7a271a; color:#fff; }
+
+  /* caregiver phone */
+  .person { display:flex; align-items:center; gap:12px; }
+  .av { width:50px; height:50px; border-radius:50%; background:#c7d7fe; display:grid; place-items:center; font-weight:700; font-size:20px; color:#1e3a8a; }
+  .person .nm { font-weight:700; font-size:18px; } .person .st { font-size:14px; color:var(--mute); }
+  .chip { margin-left:auto; font-size:13px; font-weight:700; padding:5px 12px; border-radius:999px; background:var(--teal-soft); color:#065f46; white-space:nowrap; }
+  .chip.red { background:var(--red-soft); color:#b42318; } .chip.amber { background:var(--amber-soft); color:var(--amber); }
+  .feed { list-style:none; margin:0; padding:0; } .feed li { display:flex; gap:10px; align-items:center; padding:8px 0; border-top:1px solid var(--line); font-size:15px; }
+  .feed li:first-child { border-top:0; } .feed .tm { color:var(--mute); font-size:13px; width:64px; } .feed .em { font-size:20px; width:26px; text-align:center; }
+  .feed .good { color:#065f46; font-weight:600; } .feed .bad { color:#b42318; font-weight:600; }
+  .empty { color:var(--mute); font-size:14px; padding:6px 0; }
+
+  .push { position:absolute; left:10px; right:10px; top:-260px; z-index:9; background:#fff; border-radius:20px; padding:14px 14px 12px;
+          box-shadow:0 12px 30px rgba(16,24,40,.35); border:2px solid var(--red); transition:top .45s cubic-bezier(.2,.9,.3,1); }
+  .push.on { top:44px; }
+  .push .h { display:flex; align-items:center; gap:8px; font-weight:700; color:#b42318; font-size:15px; }
+  .push .m { margin:6px 0 10px; font-size:15px; line-height:1.35; }
+  .push .a { display:flex; gap:8px; } .push .a button { flex:1; border-radius:12px; border:0; padding:11px; font-weight:700; font-size:15px; }
+  .push .call { background:var(--red); color:#fff; } .push .ack { background:#eef1f6; color:var(--ink); }
+  .toast { position:absolute; left:20px; right:20px; bottom:20px; background:#101828; color:#fff; border-radius:14px; padding:12px 14px; font-size:14px;
+           opacity:0; transform:translateY(10px); transition:all .3s; z-index:10; pointer-events:none; text-align:center; }
+  .toast.on { opacity:1; transform:none; }
+  .note { position:fixed; left:0; right:0; bottom:6px; text-align:center; font-size:12px; color:var(--mute); z-index:5; pointer-events:none; }
+  body.showtech .note { display:none; }
+  @media (prefers-reduced-motion:reduce) { * { animation:none !important; transition:none !important; } }
+</style>
+</head>
+<body>
+<div class="bar" role="toolbar" aria-label="Presenter controls">
+  <span class="lbl">Demo controls</span>
+  <button data-act="Walking">Walk</button><button data-act="Jogging">Jog</button>
+  <button data-act="Upstairs">Stairs up</button><button data-act="Downstairs">Stairs down</button>
+  <button data-act="Sitting">Sit</button><button data-act="Standing">Stand</button>
+  <button id="fallBtn" class="fall">Simulate a fall</button>
+  <button id="playBtn" class="play">&#9654; Play a day</button>
+  <button id="resetBtn">Reset</button>
+  <span class="sp"></span>
+  <label><input type="checkbox" id="techChk"> Technical view</label>
+</div>
+
+<div id="viewport"><div id="stage">
+
+  <aside class="tech" aria-label="Technical view">
+    <h3>What the sensor sees</h3>
+    <canvas id="axes" width="940" height="300" role="img" aria-label="Acceleration on three axes"></canvas>
+    <div class="cap">x solid, y dashed, z dotted. 4 seconds. m/s&sup2;.</div>
+    <canvas id="mag" width="940" height="230" role="img" aria-label="Acceleration magnitude in g"></canvas>
+    <div class="cap">Total movement in g. Dashed line: 2.5 g impact threshold. A still phone reads 1 g.</div>
+    <h3>Model confidence</h3>
+    <div id="bars"></div>
+    <h3 style="margin-top:12px">Fall rule</h3>
+    <div class="kv" id="fallInfo">&mdash;</div>
+    <h3 style="margin-top:12px">Scoreboard</h3>
+    <div class="kv" id="score">No windows tested yet.</div>
+  </aside>
+
+  <section class="col">
+    <h2>Mary's phone</h2>
+    <div class="phone"><div class="screen" id="wearer">
+      <div class="notch"></div>
+      <div class="sbar"><span class="clock">9:41</span><span>&#9679;&#9679;&#9679; 87%</span></div>
+      <div class="appbar"><div class="logo">S</div><div><div class="t">Safe Steps</div><div class="s">Good day, Mary</div></div>
+        <div class="pill"><i></i>Monitoring</div></div>
+      <div class="body">
+        <div class="card status" aria-live="polite">
+          <div class="ring" id="ring">&#128694;</div>
+          <div class="big" id="actName">Getting ready</div>
+          <div class="sub" id="actSub">Waiting for movement</div>
+          <span class="conf" id="conf">Listening to your phone's motion sensor</span>
+        </div>
+        <div class="card"><h4>Live motion</h4><canvas id="mini" width="640" height="124" role="img" aria-label="Live motion"></canvas></div>
+        <div class="card"><h4>Today's activity</h4>
+          <div class="seg" id="seg"></div>
+          <div class="split"><span id="activeT">Active 0%</span><span id="restT">Resting 0%</span></div></div>
+        <button class="sos" type="button" id="sosBtn">SOS &middot; Call for help</button>
+      </div>
+      <div class="fallov" id="fallov" role="alertdialog" aria-labelledby="fh">
+        <div style="font-size:54px">&#9888;&#65039;</div>
+        <h3 id="fh">Fall detected</h3><p>Are you OK? We'll alert your family if you don't answer.</p>
+        <div class="count" id="count" aria-live="polite">10</div>
+        <div class="btns"><button class="ok" id="okBtn">I'm OK</button><button class="help" id="helpBtn">I need help</button></div>
+      </div>
+    </div></div>
+  </section>
+
+  <section class="col">
+    <h2>Caregiver's phone</h2>
+    <div class="phone"><div class="screen" id="care">
+      <div class="notch"></div>
+      <div class="sbar"><span class="clock">9:41</span><span>&#9679;&#9679;&#9679; 64%</span></div>
+      <div class="appbar"><div class="logo" style="background:#2563eb">S</div><div><div class="t">Safe Steps</div><div class="s">Family view</div></div></div>
+      <div class="body">
+        <div class="card"><div class="person"><div class="av">M</div>
+          <div><div class="nm">Mary</div><div class="st" id="careStatus">No activity yet</div></div>
+          <span class="chip" id="chip">Safe</span></div></div>
+        <div class="card" style="flex:1;overflow:hidden"><h4>Recent activity</h4>
+          <ul class="feed" id="feed"></ul><div class="empty" id="feedEmpty">Nothing to show yet. Start the demo.</div></div>
+      </div>
+      <div class="push" id="push" role="alert">
+        <div class="h">&#9888;&#65039; Possible fall: Mary</div>
+        <div class="m" id="pushMsg">&mdash;</div>
+        <div class="a"><button class="call" id="callBtn">Call Mary</button><button class="ack" id="ackBtn">I'm on it</button></div>
+      </div>
+      <div class="toast" id="toast" role="status"></div>
+    </div></div>
+  </section>
+
+</div></div>
+<div class="note">Activity windows are real recordings from 9 people the model never trained on. The fall is staged, because the dataset has no recorded falls; calls and notifications are simulated.</div>
+
+<script>
+const $ = (id) => document.getElementById(id);
+const ACT = {
+  Walking:   {e:"\u{1F6B6}", name:"Walking",          sub:"Out and about",       c:"#14b8a6", grp:"Active"},
+  Jogging:   {e:"\u{1F3C3}", name:"Jogging",          sub:"Very active",         c:"#3b82f6", grp:"Active"},
+  Upstairs:  {e:"⬆️", name:"Climbing stairs", sub:"Going up",          c:"#8b5cf6", grp:"Active"},
+  Downstairs:{e:"⬇️", name:"Going downstairs", sub:"Going down",       c:"#c4b5fd", grp:"Active"},
+  Sitting:   {e:"\u{1FA91}", name:"Sitting",          sub:"Resting",             c:"#94a3b8", grp:"Resting"},
+  Standing:  {e:"\u{1F9CD}", name:"Standing",         sub:"Standing still",      c:"#cbd5e1", grp:"Resting"}
+};
+const ORDER = ["Walking","Jogging","Upstairs","Downstairs","Sitting","Standing"];
+let busy = false, playing = false, counts = {}, last = null, tested = 0, correct = 0, curAlert = null;
+const sleep = (ms) => new Promise(r => setTimeout(r, ms));
+const hhmm = (d = new Date()) => d.toLocaleTimeString([], {hour:"2-digit", minute:"2-digit"});
+const hhmmss = (d = new Date()) => d.toLocaleTimeString([], {hour:"2-digit", minute:"2-digit", second:"2-digit"});
+
+/* ---------- fit the stage to the window ---------- */
+function fit() {
+  const st = $("stage"), vp = $("viewport");
+  st.style.transform = "translateX(-50%) scale(1)";
+  const k = Math.min(1, vp.clientWidth / st.offsetWidth, vp.clientHeight / st.offsetHeight);
+  st.style.transform = `translateX(-50%) scale(${k})`;
+}
+window.addEventListener("resize", fit);
+$("techChk").addEventListener("change", (e) => { document.body.classList.toggle("showtech", e.target.checked); fit(); });
+setInterval(() => document.querySelectorAll(".clock").forEach(c => c.textContent = hhmm()), 1000);
+
+/* ---------- charts ---------- */
+function chart(cv, series, n, o) {
+  const ctx = cv.getContext("2d"), W = cv.width, H = cv.height, m = {l:70, r:10, t:10, b:38};
+  ctx.clearRect(0, 0, W, H);
+  const all = series.flatMap(s => s.d).concat(o.extra || []);
+  let lo = Math.min(...all, o.min ?? Infinity), hi = Math.max(...all); const pad = (hi - lo) * .08 || 1; lo -= pad; hi += pad;
+  const X = (i) => m.l + (W - m.l - m.r) * i / 79, Y = (v) => m.t + (H - m.t - m.b) * (1 - (v - lo) / (hi - lo));
+  ctx.font = "26px 'Segoe UI', sans-serif"; ctx.fillStyle = "#667085"; ctx.textAlign = "right";
+  for (let k = 0; k <= 3; k++) { const v = lo + (hi - lo) * k / 3, y = Y(v);
+    ctx.strokeStyle = "#eaecf0"; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(m.l, y); ctx.lineTo(W - m.r, y); ctx.stroke();
+    ctx.fillText(v.toFixed(o.dec), m.l - 8, y + 9); }
+  ctx.textAlign = "center"; for (let s = 0; s <= 4; s++) ctx.fillText(s + "s", X(Math.min(79, s * 20)), H - 8);
+  if (o.thr) { ctx.setLineDash([10, 7]); ctx.strokeStyle = "#d92d20"; ctx.lineWidth = 2; ctx.beginPath();
+    ctx.moveTo(m.l, Y(o.thr)); ctx.lineTo(W - m.r, Y(o.thr)); ctx.stroke(); ctx.setLineDash([]); }
+  series.forEach(s => { ctx.setLineDash(s.dash); ctx.strokeStyle = s.col; ctx.lineWidth = s.w; ctx.beginPath();
+    for (let i = 0; i < n; i++) { const x = X(i), y = Y(s.d[i]); i ? ctx.lineTo(x, y) : ctx.moveTo(x, y); } ctx.stroke(); ctx.setLineDash([]); });
+}
+function mini(mag, n, alarm) {
+  const cv = $("mini"), ctx = cv.getContext("2d"), W = cv.width, H = cv.height;
+  ctx.clearRect(0, 0, W, H);
+  const lo = 0, hi = Math.max(3, ...mag) * 1.05, X = (i) => 4 + (W - 8) * i / 79, Y = (v) => H - 6 - (H - 12) * (v - lo) / (hi - lo);
+  ctx.strokeStyle = "#eaecf0"; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(0, Y(1)); ctx.lineTo(W, Y(1)); ctx.stroke();
+  ctx.strokeStyle = alarm ? "#d92d20" : "#0f9d8a"; ctx.lineWidth = 3.5; ctx.lineJoin = "round"; ctx.beginPath();
+  for (let i = 0; i < n; i++) { const x = X(i), y = Y(mag[i]); i ? ctx.lineTo(x, y) : ctx.moveTo(x, y); } ctx.stroke();
+}
+function draw(d, n) {
+  const mag = d.x.map((_, i) => Math.hypot(d.x[i], d.y[i], d.z[i]) / d.g);
+  mini(mag, n, d.fall.fall_suspected);
+  if (document.body.classList.contains("showtech")) {
+    chart($("axes"), [{d:d.x,dash:[],w:3,col:"#0f9d8a"},{d:d.y,dash:[14,8],w:3,col:"#2563eb"},{d:d.z,dash:[3,7],w:3.5,col:"#b54708"}], n, {dec:0});
+    chart($("mag"), [{d:mag,dash:[],w:3,col:"#101828"}], n, {dec:1, thr:2.5, extra:[2.7], min:0});
+  }
+}
+function animate(d) { return new Promise(res => { const t0 = Date.now(), dur = 900;
+  const t = setInterval(() => { const k = Math.min(1, (Date.now() - t0) / dur); draw(d, Math.max(2, Math.round(k * 80)));
+    if (k >= 1) { clearInterval(t); res(); } }, 40); }); }
+
+/* ---------- wearer phone ---------- */
+function setStatus(a, d) {
+  const m = ACT[a];
+  $("ring").textContent = m.e; $("ring").style.background = ""; $("ring").style.borderColor = m.c;
+  $("actName").textContent = m.name; $("actSub").textContent = m.sub;
+  const pct = Math.round(d.confidence * 100);
+  $("conf").textContent = d.confidence < 0.5 ? `Likely ${m.name.toLowerCase()} (${pct}% sure)` : `${pct}% sure`;
+}
+function renderSeg() {
+  const tot = ORDER.reduce((s, a) => s + (counts[a] || 0), 0);
+  $("seg").innerHTML = ORDER.map(a => `<div title="${ACT[a].name}" style="width:${tot ? 100 * (counts[a] || 0) / tot : 0}%;background:${ACT[a].c}"></div>`).join("");
+  const act = ORDER.filter(a => ACT[a].grp === "Active").reduce((s, a) => s + (counts[a] || 0), 0);
+  $("activeT").textContent = "Active " + (tot ? Math.round(100 * act / tot) : 0) + "%";
+  $("restT").textContent = "Resting " + (tot ? Math.round(100 * (tot - act) / tot) : 0) + "%";
+}
+
+/* ---------- caregiver phone ---------- */
+function feedAdd(text, emoji, cls) {
+  $("feedEmpty").style.display = "none";
+  const li = document.createElement("li");
+  li.innerHTML = `<span class="tm">${hhmmss()}</span><span class="em">${emoji}</span><span class="${cls || ""}">${text}</span>`;
+  $("feed").prepend(li); while ($("feed").children.length > 7) $("feed").lastChild.remove();
+}
+function setChip(txt, cls) { const c = $("chip"); c.textContent = txt; c.className = "chip " + (cls || ""); }
+function toast(msg) { const t = $("toast"); t.textContent = msg; t.classList.add("on"); setTimeout(() => t.classList.remove("on"), 2400); }
+
+/* ---------- technical panel ---------- */
+function tech(d) {
+  const entries = ACT[d.actual] || ACT[d.predicted] ? Object.entries(d.probs).sort((a, b) => b[1] - a[1]) : [];
+  $("bars").innerHTML = (d.kind === "simulated fall" ? [] : entries).map(([c, p], i) =>
+    `<div class="prow"><span class="n">${c}</span><span class="b"><div class="${i === 0 ? "top" : ""}" style="width:${(p * 100).toFixed(1)}%"></div></span><span class="p">${(p * 100).toFixed(0)}%</span></div>`).join("")
+    || '<div class="kv">Staged signal: no activity is predicted; the fall rule does the work.</div>';
+  const f = d.fall;
+  $("fallInfo").innerHTML = `Peak impact <b>${f.impact_g.toFixed(2)} g</b> (threshold 2.5 g): ${f.impact ? "<b>yes</b>" : "no"}<br>` +
+    `Still afterwards: ${f.post_impact_still ? "<b>yes</b>" : "no"}<br>Fall suspected: <b>${f.fall_suspected ? "YES" : "no"}</b>`;
+  if (ACT[d.actual]) { tested++; if (d.predicted === d.actual) correct++;
+    $("score").innerHTML = `${correct} of ${tested} correct (${Math.round(100 * correct / tested)}%)` +
+      (d.predicted !== d.actual ? `<br>Last miss: actual ${d.actual}, predicted ${d.predicted}` : ""); }
+}
+
+/* ---------- fall flow ---------- */
+function askAreYouOk() {
+  return new Promise(res => {
+    const ov = $("fallov"); let left = 10; $("count").textContent = left; ov.classList.add("on");
+    const done = (r) => { clearInterval(tm); ov.classList.remove("on"); $("okBtn").onclick = $("helpBtn").onclick = null; res(r); };
+    const tm = setInterval(() => { left--; $("count").textContent = Math.max(0, left); if (left <= 0) done("timeout"); }, 1000);
+    $("okBtn").onclick = () => done("ok"); $("helpBtn").onclick = () => done("help");
+    $("okBtn").focus();
+  });
+}
+function raiseAlert(d, why) {
+  curAlert = d;
+  $("pushMsg").innerHTML = `<b>Hard impact (${d.fall.impact_g.toFixed(1)} g), then no movement.</b><br>` +
+    (why === "help" ? "Mary pressed <b>I need help</b>." : "Mary did not respond within 10 seconds.") + `<br><span style="color:#667085">${hhmmss()}</span>`;
+  $("push").classList.add("on"); setChip("Possible fall", "red"); $("careStatus").textContent = "Needs attention now";
+  feedAdd("Possible fall detected", "⚠️", "bad");
+}
+$("ackBtn").onclick = () => { if (!curAlert) return; $("push").classList.remove("on"); setChip("Responding", "amber");
+  $("careStatus").textContent = "You are responding"; feedAdd("You acknowledged the alert", "✅", "good"); curAlert = null; };
+$("callBtn").onclick = () => toast("Demo: this would start a phone call to Mary");
+$("sosBtn").onclick = () => toast("Demo: SOS would call the caregiver and emergency contacts");
+
+/* ---------- main step ---------- */
+async function step(kind) {
+  const r = await fetch(kind === "FALL" ? "/api/fall" : "/api/window?activity=" + kind);
+  if (!r.ok) throw new Error("server " + r.status);
+  const d = await r.json();
+  await animate(d);
+  tech(d);
+  if (d.kind !== "simulated fall") {
+    const a = d.predicted; setStatus(a, d); counts[a] = (counts[a] || 0) + 1; renderSeg();
+    $("careStatus").textContent = ACT[a].name + " · just now";
+    if (last !== a) { feedAdd(ACT[a].name, ACT[a].e); last = a; }
+    if (curAlert === null && $("chip").textContent !== "Safe" && !$("push").classList.contains("on")) setChip("Safe");
+  }
+  if (d.fall.fall_suspected) {
+    $("ring").textContent = "⚠️"; $("ring").style.borderColor = "#d92d20"; $("actName").textContent = "Impact detected";
+    $("actSub").textContent = "Checking if you are OK"; $("conf").textContent = `${d.fall.impact_g.toFixed(1)} g impact, then stillness`;
+    const ans = await askAreYouOk();
+    if (ans === "ok") { feedAdd("Mary said she is OK (alert cancelled)", "✅", "good"); setChip("Safe"); $("careStatus").textContent = "Fall alert cancelled by Mary";
+      toast("Alert cancelled: Mary is OK"); $("actName").textContent = "Glad you're OK"; $("actSub").textContent = "Alert cancelled"; $("ring").textContent = "\u{1F44D}"; $("ring").style.borderColor = "#14b8a6"; }
+    else { raiseAlert(d, ans); $("actName").textContent = "Help is on the way"; $("actSub").textContent = "Your family has been alerted"; $("ring").textContent = "\u{1F4DE}"; }
+  }
+}
+async function guarded(kind) {
+  if (busy) return; busy = true; lock(true);
+  try { await step(kind); } catch (e) { toast(String(e)); }
+  busy = false; lock(false);
+}
+function lock(b) { document.querySelectorAll(".bar button").forEach(x => { if (x.id !== "playBtn" && x.id !== "resetBtn") x.disabled = b; }); }
+
+document.querySelectorAll("[data-act]").forEach(b => b.addEventListener("click", () => guarded(b.dataset.act)));
+$("fallBtn").addEventListener("click", () => guarded("FALL"));
+
+const DAY = ["Sitting","Sitting","Standing","Walking","Walking","Upstairs","Walking","Jogging","Walking","Sitting","FALL"];
+$("playBtn").addEventListener("click", async () => {
+  if (playing) { playing = false; return; }
+  if (busy) return;
+  playing = true; busy = true; lock(true); $("playBtn").innerHTML = "&#9632; Stop";
+  try { for (const k of DAY) { if (!playing) break; await step(k); if (k !== "FALL") await sleep(1500); } } catch (e) { toast(String(e)); }
+  playing = false; busy = false; lock(false); $("playBtn").innerHTML = "&#9654; Play a day";
+});
+$("resetBtn").addEventListener("click", () => {
+  if (busy && !playing) return; playing = false;
+  counts = {}; last = null; tested = 0; correct = 0; curAlert = null; renderSeg();
+  $("feed").innerHTML = ""; $("feedEmpty").style.display = ""; $("push").classList.remove("on"); setChip("Safe");
+  $("careStatus").textContent = "No activity yet"; $("ring").textContent = "\u{1F6B6}"; $("ring").style.borderColor = ""; $("actName").textContent = "Getting ready";
+  $("actSub").textContent = "Waiting for movement"; $("conf").textContent = "Listening to your phone's motion sensor";
+  $("score").textContent = "No windows tested yet."; $("bars").innerHTML = ""; $("fallInfo").textContent = "—"; mini([1,1], 2, false);
+});
+
+renderSeg(); mini(Array(80).fill(1), 80, false); fit();
+</script>
+</body>
+</html>

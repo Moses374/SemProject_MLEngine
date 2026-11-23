@@ -1,0 +1,280 @@
+{
+  "terms": [
+    [
+      "Accelerometer",
+      "A sensor in every phone that measures how fast the phone is speeding up or slowing down in three directions (x, y, z). It also feels gravity, so it knows which way is down."
+    ],
+    [
+      "m/s² and g",
+      "Units of acceleration. 1 g is the pull of gravity, about 9.81 m/s². A phone lying still reads 1 g."
+    ],
+    [
+      "Window",
+      "A short slice of the sensor stream (here 4 seconds). We classify one window at a time."
+    ],
+    [
+      "Feature",
+      "A single number that summarises a window, for example the average or how much the signal wiggles. The model learns from features, not raw readings."
+    ],
+    [
+      "Classifier / model",
+      "A program that learned from labelled examples how to guess the activity for a new window."
+    ],
+    [
+      "Random forest",
+      "300 small decision trees that each vote on the answer; the majority wins. Robust and needs little tuning."
+    ],
+    [
+      "Baseline",
+      "The dumbest sensible guess (always predict the most common activity). A real model must beat it."
+    ],
+    [
+      "Accuracy",
+      "Percentage of windows classified correctly."
+    ],
+    [
+      "Precision and recall",
+      "Precision: when the model says Walking, how often is it right? Recall: of all the real Walking windows, how many did it find?"
+    ],
+    [
+      "F1 and macro F1",
+      "F1 combines precision and recall into one score. Macro F1 averages it over all six activities equally, so small activities such as Standing count as much as Walking."
+    ],
+    [
+      "Subject-wise split",
+      "Testing on people the model never saw in training, like a real user installing the app."
+    ],
+    [
+      "Confusion matrix",
+      "A grid of actual activity (rows) against predicted activity (columns). The diagonal is correct answers."
+    ]
+  ],
+  "slides": [
+    {
+      "title": "Title",
+      "say": "Good day. I am Moses, and with me are Collins and Kathy. Our project is a machine learning engine that looks at the motion sensor in a phone and works out what the person is doing, and it can also raise a warning if it looks like they have fallen. I will cover the problem and the data, Collins will explain how we prepared the data and tested it fairly, and Kathy will present the results and the fall detection. I will close with the conclusion.",
+      "presenter": "Moses",
+      "on_slide": "Project title and group members.",
+      "handoff": ""
+    },
+    {
+      "title": "The problem and our goal",
+      "say": "The problem: falls are a major cause of injury for elderly people, and the longer help takes to arrive, the worse the outcome. Almost everyone carries a smartphone, and every smartphone has an accelerometer, which is a sensor that measures movement in three directions. So the hardware is already there. Our goal has two parts, shown in the table. First, a classifier that says which of six activities the person is doing: walking, jogging, going upstairs, going downstairs, sitting or standing. Second, a fall rule that looks for a hard impact followed by the person staying still.",
+      "presenter": "Moses",
+      "on_slide": "Two short points on why falls matter, and a table of the two parts of the engine.",
+      "handoff": ""
+    },
+    {
+      "title": "The pipeline",
+      "say": "This diagram is the whole project in one picture, read left to right. We start with the raw data file from the WISDM dataset. We clean it, because real sensor files contain broken lines. We cut the continuous stream into short windows. We turn each window into a handful of summary numbers, called features. We train models on those features and save the best one. The saved model tells us the activity, and separately the fall rule checks the same window for a fall. Everything is written as a small Python package so it can be re-run with one command.",
+      "presenter": "Moses",
+      "on_slide": "A flow diagram: raw file, clean, windows, features, train, model, then activity and fall rule.",
+      "handoff": ""
+    },
+    {
+      "title": "The WISDM dataset",
+      "say": "We used a public dataset called WISDM from Fordham University. 36 volunteers kept an Android phone in their front trouser pocket and did the six activities while the phone recorded movement 20 times every second. After cleaning we have just over a million readings. The chart shows they are not evenly spread: walking and jogging are about two thirds of the data, while sitting and standing are small. That imbalance matters later, because it means accuracy alone can flatter a model, so we also report a fairer score called macro F1.",
+      "presenter": "Moses",
+      "on_slide": "Four stat cards (36 subjects, 20 Hz, 1,019,496 readings, 6 activities) and a bar chart of readings per activity.",
+      "handoff": ""
+    },
+    {
+      "title": "Data exploration (Deliverable 1)",
+      "say": "This is our first deliverable, where we examined the raw file. It has 1,086,466 rows and 6 columns: the subject, the activity, a timestamp, and the x, y, z acceleration. The IDs and timestamps are integers, the activity is text, and the three acceleration values are decimals. It is almost complete: exactly one value is missing, a single z reading, and a few lines in the file were malformed, so we skip them. Our cleaning step removes bad lines, missing values, readings with a zero timestamp and duplicates. That takes 1,086,466 down to 1,019,496 readings, about 6 percent removed.",
+      "presenter": "Moses",
+      "on_slide": "A table answering the Deliverable 1 questions (rows/columns, datatypes, completeness, df_sample) and the cleaning numbers.",
+      "handoff": "That is the data and where we started. Collins will now explain how we turned it into something a model can learn from."
+    },
+    {
+      "title": "What the signals look like",
+      "say": "Here is four seconds of movement for each activity. The vertical axis is the total strength of the acceleration. Notice how different they look: jogging swings hard, walking has a steady rhythm, and sitting and standing are almost flat lines. That tells us the problem is learnable. It also warns us that upstairs, downstairs and walking look alike, and we will see that is exactly where the model struggles.",
+      "presenter": "Collins",
+      "on_slide": "Six small line graphs, one per activity, showing four seconds of acceleration.",
+      "handoff": ""
+    },
+    {
+      "title": "Windowing: turning a stream into examples",
+      "say": "A single reading, one instant of acceleration, tells you almost nothing, because walking, running and sitting down can all produce the same number for a split second. What identifies an activity is how the signal behaves over a few seconds. So we cut the stream into windows of 80 readings, which is 4 seconds. Each new window starts 2 seconds after the last, so they overlap by half. That gives us more examples and stops an event being cut in two by bad luck. We only keep windows where one person is doing one activity, so each has a single correct label. This gives us 25,230 labelled windows.",
+      "presenter": "Collins",
+      "on_slide": "A diagram of overlapping windows and three bullets with the window size and count.",
+      "handoff": ""
+    },
+    {
+      "title": "Features: summarising each window",
+      "say": "A window is 240 raw numbers, which is too much and too noisy to learn from directly. So we summarise each window into 32 features. The averages tell us the phone's orientation, which is how sitting differs from standing, since gravity pulls along different axes. The spread and range tell us how vigorous the movement is. The frequency features tell us how fast the movement repeats, which separates walking from jogging. You do not need to memorise the table; the point is that each feature captures one idea about how the person is moving.",
+      "presenter": "Collins",
+      "on_slide": "A table of the six feature groups: what each measures and why it helps.",
+      "handoff": ""
+    },
+    {
+      "title": "Evaluating honestly: subject-wise split",
+      "say": "This slide is about testing fairly. The obvious approach is to shuffle all the windows and set some aside for testing. But windows from the same person are nearly identical, so the model would effectively see the test answers during training and the score would be inflated. A real user is a new person, so we hold out whole people: 27 subjects for training and 9 completely unseen subjects for testing. We compared three models: a baseline that always guesses the most common activity, logistic regression, and a random forest. We report accuracy, and macro F1, which treats all six activities equally.",
+      "presenter": "Collins",
+      "on_slide": "A diagram of the train/test split (27 train subjects, 9 test subjects) and the three models and metrics.",
+      "handoff": "So that is how we prepared the data and tested it fairly. Kathy will now show how well it works."
+    },
+    {
+      "title": "Results",
+      "say": "The baseline gets 39 percent accuracy just by always guessing walking, and a macro F1 of only 0.09. Both real models are far better. The random forest is the best, with 85 percent accuracy and macro F1 of 0.775, on people it has never seen. To be sure that was not a lucky split, we repeated the test five times with different groups of people and got a macro F1 of 0.79, give or take 0.035. So the result is stable. The random forest is the model we saved.",
+      "presenter": "Kathy",
+      "on_slide": "A bar chart and table comparing the three models, plus the cross-validation result.",
+      "handoff": ""
+    },
+    {
+      "title": "Where the model succeeds and struggles",
+      "say": "The confusion matrix shows, for each real activity on the left, what the model predicted along the top. The diagonal is correct answers. Jogging and walking are excellent. The weak spot is downstairs: only 34 percent of real downstairs windows are found, and most are labelled upstairs or walking. That makes sense, because with a phone in a pocket these three movements are physically very similar. Sitting and standing are also sometimes swapped, since neither involves movement and they differ mainly in phone tilt. We are reporting this openly rather than hiding it.",
+      "presenter": "Kathy",
+      "on_slide": "The confusion matrix and a table of precision, recall and F1 per activity.",
+      "handoff": ""
+    },
+    {
+      "title": "Fall-risk detection",
+      "say": "An important honest point: the WISDM dataset contains no falls, so we could not train a fall detector from it. Instead we wrote a rule based on physics. A fall has two stages: a hard impact, then the person lies still. The rule flags a window if the peak acceleration is at least 2.5 g and the last half second is almost perfectly still at about 1 g. Left graph: a real walking window. It crosses 2.5 g on some footsteps, but the person keeps moving, so no flag. Right graph: a simulated fall, a spike then stillness, which is flagged. The caveat is that we only tested it on a simulated signal, so before real use it must be validated on a dataset with real falls.",
+      "presenter": "Kathy",
+      "on_slide": "Two graphs: a real walking window (no flag) and a simulated fall (flagged), plus three bullets.",
+      "handoff": ""
+    },
+    {
+      "title": "Live demonstration",
+      "presenter": "Kathy narrates, Collins operates",
+      "on_slide": "Left: a screenshot of the demo (the backup if the live demo cannot run). Right: the four things we will do live.",
+      "say": "Now let us see it working. Collins is running our demo, which looks like a real app. The left phone is Mary's phone, the one that does the sensing. The right phone is her caregiver's phone, for example a daughter or son. I will explain what we see. Every activity you will see is a real four-second recording from one of nine people the model never saw during training. [Collins clicks Walk, then Jog.] On Mary's phone the model names what she is doing and says how sure it is. The caregiver's phone updates at the same moment and keeps a simple activity history. Notice that nobody on the caregiver side sees raw numbers, just plain language. [Collins clicks Stairs down two or three times.] This is our weak spot. If the model is not sure, the app says 'likely' and shows the percentage instead of pretending to be certain. [Collins clicks Simulate a fall.] This is staged: a hard impact, then a motionless phone. Mary's phone asks 'Are you OK?' with a ten second countdown, so a dropped phone does not frighten the family. If she answers, the alert is cancelled. If she does not answer, or presses help, the caregiver gets an urgent notification. [Collins ticks Technical view.] For those who want the evidence, this panel shows the sensor signal, the model's confidence for each activity, and the fall rule's numbers. [Optional: Collins clicks Play a day.] This plays a whole day automatically, ending in a fall.",
+      "handoff": "That is the system working end to end. I will now go through its limitations."
+    },
+    {
+      "title": "Limitations and future work",
+      "say": "These are the things we would fix next. The fall rule is unvalidated and needs real fall data, such as the SisFall or MobiAct datasets. WISDM has no lying-down activity, which matters after a fall. The volunteers were not elderly, so we cannot promise the same accuracy for the target users. All the data came from a trouser pocket. Downstairs is weak. And finally this is currently a Python library, not yet a phone app. Being clear about these limits is part of doing the work properly.",
+      "presenter": "Kathy",
+      "on_slide": "A table of limitations paired with next steps.",
+      "handoff": "Those are the limits. I will hand back to Moses to wrap up."
+    },
+    {
+      "title": "Conclusion",
+      "say": "To summarise: our engine recognises six everyday activities with about 85 percent accuracy on people it has never seen, compared with 39 percent for the simple baseline. Because we cleaned the data carefully and tested on unseen people, those numbers are a realistic estimate rather than an inflated one. On top of that sits a transparent fall rule, and we have been clear about what has and has not been validated. Anyone can reproduce all of it with one command. Thank you, and we are happy to take questions. Each of us will answer questions about our own part.",
+      "presenter": "Moses",
+      "on_slide": "Three summary points and the reference.",
+      "handoff": ""
+    }
+  ],
+  "qa": [
+    [
+      "Why not just use accuracy?",
+      "The data is imbalanced. Always guessing Walking is already right about 39% of the time. Macro F1 gives every activity equal weight, so it exposes weak classes like Downstairs.",
+      "Kathy"
+    ],
+    [
+      "Why did you split by person instead of randomly?",
+      "Neighbouring windows from the same person are almost identical. A random split lets the model memorise a person, giving an inflated score. Splitting by person tests whether it works on a new user.",
+      "Collins"
+    ],
+    [
+      "Why a random forest?",
+      "It handles many features, captures non-linear patterns, needs little tuning, and gave the best macro F1 of the three models we compared.",
+      "Collins"
+    ],
+    [
+      "Is the fall detection proven?",
+      "No, and we say so. WISDM has no falls. It is a physics-based rule tested only on a simulated signal. It needs validation on real fall data before real use.",
+      "Kathy"
+    ],
+    [
+      "Why is downstairs bad?",
+      "It looks very much like walking and upstairs when the phone is in a pocket. 34% recall; most errors go to Upstairs and Walking.",
+      "Kathy"
+    ],
+    [
+      "What does 1 g or 9.81 mean?",
+      "The acceleration due to gravity. A still phone reads about 9.81 m/s², i.e. 1 g.",
+      "Moses"
+    ],
+    [
+      "Why 4-second windows with 50% overlap?",
+      "4 seconds contains several steps, so the rhythm is visible. Overlap gives more examples and avoids cutting an event in half.",
+      "Collins"
+    ],
+    [
+      "How many rows were removed in cleaning and why?",
+      "About 67,000 of 1,086,466 (6.2%): malformed or missing values, zero timestamps (clock not started) and duplicates.",
+      "Moses"
+    ],
+    [
+      "Will it work for elderly people?",
+      "Unknown. The volunteers were not elderly and elderly gait differs. Testing on elderly participants is a next step.",
+      "Kathy"
+    ],
+    [
+      "How do I run it?",
+      "python -m mlengine.train trains and saves the model; python -m mlengine.predict readings.csv classifies a window.",
+      "Moses"
+    ],
+    [
+      "Is the demo using real data?",
+      "The activity windows are real four-second recordings from the nine held-out subjects. The fall is staged, because the dataset has no falls.",
+      "Collins"
+    ],
+    [
+      "Why did the model get that one wrong?",
+      "Downstairs is our weakest class (34% recall); it looks like Upstairs and Walking from a pocket phone. The scoreboard shows errors openly on purpose.",
+      "Kathy"
+    ],
+    [
+      "Could this run on a real phone?",
+      "Not yet. The demo runs on a laptop. The next step is to wrap the model in a phone app or a small service that streams sensor data.",
+      "Moses"
+    ]
+  ],
+  "demo": {
+    "setup": [
+      "Do this before you present, on the laptop that will be connected to the projector.",
+      "Open a terminal in the project folder (SemProject_MLEngine).",
+      "Run: python -m mlengine.train (only needed once; it saves the demo model). It takes 1 to 2 minutes.",
+      "Run: python -m mlengine.demo. Wait for the line \"Demo running at http://localhost:8000\" (about 15 seconds).",
+      "Open http://localhost:8000 in the browser, press F11 for full screen, and click Walk once to confirm it works. Use Reset to clear the screens before presenting.",
+      "Keep the terminal window open but out of sight. Close it only after the presentation (Ctrl+C stops the demo)."
+    ],
+    "run": [
+      [
+        "Click Walk, then Jog",
+        "Left phone (Mary): the big status card names the activity and the confidence. Caregiver phone (right): status text and the activity history update at once. Point at the Today's activity bar filling up."
+      ],
+      [
+        "Click Sit",
+        "Almost no movement, so Live motion goes flat. The caregiver sees 'Sitting' under Mary's name."
+      ],
+      [
+        "Click Stairs down two or three times",
+        "This is our weak class. If the card says 'Likely ... (46% sure)', say that the app is honest about uncertainty. If it names the wrong stairs direction, say: that is our known weak spot."
+      ],
+      [
+        "Click Simulate a fall",
+        "Mary's phone goes red with a 10-second 'Are you OK?' countdown. Two endings: let the countdown run out (or press I need help) and the caregiver gets an urgent notification; or press I'm OK and the alert is cancelled. Do the first ending live, and mention the second."
+      ],
+      [
+        "Tick Technical view",
+        "For markers: the sensor graphs, the confidence for all six activities, the fall rule's numbers and a running scoreboard of right and wrong answers."
+      ],
+      [
+        "Optional: click Play a day",
+        "Plays sitting, walking, stairs, jogging and a fall automatically (about a minute). Good if the audience wants to see it flow, or for a hands-free finish."
+      ]
+    ],
+    "trouble": [
+      [
+        "The page does not open",
+        "Check the terminal says \"Demo running\". Try http://127.0.0.1:8000. Make sure the demo was started from the project folder."
+      ],
+      [
+        "Terminal says models/demo_model.joblib not found",
+        "Run python -m mlengine.train first, then start the demo again."
+      ],
+      [
+        "Port 8000 is already in use",
+        "Start with python -m mlengine.demo --port 8001 and open http://localhost:8001."
+      ],
+      [
+        "Nothing works on the day",
+        "Use the backup screenshot on the demo slide and say: here is a capture of the same demo. Then carry on. A second screenshot is in reports/fig/demo_jogging.png."
+      ]
+    ]
+  }
+}
