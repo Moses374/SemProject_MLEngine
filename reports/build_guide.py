@@ -12,7 +12,7 @@ from reportlab.lib.units import cm
 from reportlab.platypus import KeepTogether, PageBreak, Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
 
 D = json.load(open("reports/script.json", encoding="utf-8"))
-SLIDES, TERMS, QA, DEMO = D["slides"], D["terms"], D["qa"], D["demo"]
+SLIDES, TERMS, QA, DEMO, BACK = D["slides"], D["terms"], D["qa"], D["demo"], D["backend"]
 PEOPLE = ["Moses", "Collins", "Kathy"]
 
 body = ParagraphStyle("body", fontName="Times-Roman", fontSize=11.5, leading=16, alignment=TA_JUSTIFY,
@@ -72,6 +72,10 @@ for n, t in enumerate([
     "belong to which activity. We compared three models and kept the best (a random forest).",
     "<b>Test fairly.</b> We test on people the model never saw, since that is what a real user would be."], 1):
     P(f"{n}. {t}")
+P("<b>Training versus using.</b> Training is done once: the computer is shown 25,230 labelled windows and works out "
+  "the patterns itself, producing a model, which is just a file on disk (models/activity_model.joblib). Using the model "
+  "is what happens every time new data arrives: the same 32 features are computed and the saved model answers in about "
+  "30 milliseconds. No learning happens at that point.")
 P("<b>What we found.</b> The best model is correct about 85% of the time on new people. Always guessing the most "
   "common activity would be right only 39% of the time. The model is excellent at jogging and walking but weak "
   "at downstairs, which it often confuses with upstairs and walking.")
@@ -88,15 +92,15 @@ blocks = {}
 for i, s in enumerate(SLIDES, 1):
     blocks.setdefault(s["presenter"], []).append((i, s["title"]))
 table([["Presenter", "Slides", "Topic", "Approx. time"],
-       ["Moses", "1 to 5, and 15", "Introduction, problem, pipeline, the dataset, data exploration, and the conclusion",
-        "6 to 7 min"],
-       ["Collins", "6 to 9, and runs the demo", "How the data was prepared: signals, windowing, features, fair testing; "
-        "operates the live demo on slide 13", "6 to 7 min"],
-       ["Kathy", "10 to 14", "Results, where the model struggles, fall detection, narrates the demo, limitations",
-        "7 to 8 min"]],
-      [2.4, 2.6, 8.2, 2.4])
-P("The whole talk takes about 17 to 20 minutes including the demo, at roughly one minute per slide, leaving time for questions. "
-  "<b>Questions:</b> whoever owns that part of the work answers it (the question list in Section 6 shows who). "
+       ["Moses", "1 to 6, 17 and 19", "Introduction, problem, how machine learning works here, pipeline, dataset, "
+        "data exploration; then the backend (\"Under the hood\") and the conclusion", "8 to 9 min"],
+       ["Collins", "7 to 12, and runs the demo", "Signals, windowing, features, how a decision tree and a random forest "
+        "decide, fair testing; operates the live demo on slide 16", "8 to 9 min"],
+       ["Kathy", "13 to 16, and 18", "Results, where the model struggles, fall detection, narrates the demo, "
+        "limitations", "7 to 8 min"]],
+      [2.4, 3.0, 8.0, 2.2])
+P("The whole talk takes about 24 to 28 minutes including the demo, at roughly one minute per slide, leaving time for questions. "
+  "<b>Questions:</b> whoever owns that part of the work answers it (the question list in Section 7 shows who). "
   "If someone is unsure, a teammate can add to the answer. If a question goes beyond our data, say so "
   "plainly and give your best reasoned expectation.")
 
@@ -132,18 +136,30 @@ table([["Problem", "Fix"]] + DEMO["trouble"], [5.2, 11.8])
 P("<b>Be honest on stage.</b> If the model gets an activity wrong, do not hide it or click again quickly. "
   "Say: \"That is our known weak spot, and the scoreboard records it.\" Markers value that honesty.")
 
-# ---- 5 terms
+# ---- 5 backend
 S.append(PageBreak())
-P("5. Key terms in one line each", h1)
+P("5. If they ask to see the backend", h1)
+P(BACK["intro"])
+P("What is where", h2)
+table([["Path", "What it is"]] + BACK["layout"], [6.2, 10.8])
+P("What to show, in order", h2)
+table([["Step", "Show", "What to do", "What to say"]] +
+      [[i + 1, a, b, c] for i, (a, b, c) in enumerate(BACK["steps"])], [1.3, 3.1, 6.5, 6.1])
+P("<b>Rule for all of it:</b> explain the idea first (a window goes in, 32 features are computed, the saved "
+  "model answers), then show the file that does it. Never scroll through code you cannot explain.")
+
+# ---- 6 terms
+S.append(PageBreak())
+P("6. Key terms in one line each", h1)
 P("Learn these. If you can say each one in your own words, you can answer most questions.")
 table([["Term", "Meaning"]] + TERMS, [3.6, 13.4])
 
 # ---- 5 Q&A
-P("6. Questions you are likely to be asked", h1)
+P("7. Questions you are likely to be asked", h1)
 table([["Question", "Answer", "Who answers"]] + [[q, a, o] for q, a, o in QA], [4.4, 10.2, 2.4])
 
 # ---- 6 tips
-P("7. Preparing and delivering", h1)
+P("8. Preparing and delivering", h1)
 for t in ["<b>Rehearse your own part out loud</b> at least twice, then once all together to practise the handoffs and the demo.",
           "<b>Look at the audience, not the screen.</b> Glance at the slide only to point to something.",
           "<b>Point at the figures.</b> For each graph, say what the horizontal axis is, what the vertical axis is, "

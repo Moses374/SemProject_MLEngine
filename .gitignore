@@ -1,6 +1,7 @@
 WISDM_ar_v1.1_raw.txt
 .ipynb_checkpoints/
 __pycache__/
-models/
+models/*
+!models/model_summary.txt
 .playwright-mcp/
 ~$*

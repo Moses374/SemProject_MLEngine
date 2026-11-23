@@ -1,0 +1,32 @@
+{
+  "train_windows": 18704,
+  "test_windows": 6526,
+  "train_accuracy": 1.0,
+  "test_accuracy": 0.8493717437940546,
+  "n_trees": 300,
+  "n_features": 32,
+  "avg_depth": 26.21,
+  "avg_leaves": 944.0066666666667,
+  "total_nodes": 566104,
+  "ms_per_prediction_parallel": 94.68855699989945,
+  "ms_per_prediction": 26.637493000016548,
+  "tree_root": "y_mad <= 0.98 ?",
+  "votes": {
+    "Real Walking window": {
+      "Downstairs": 89,
+      "Jogging": 0,
+      "Sitting": 0,
+      "Standing": 0,
+      "Upstairs": 44,
+      "Walking": 167
+    },
+    "Real Downstairs window": {
+      "Downstairs": 88,
+      "Jogging": 1,
+      "Sitting": 0,
+      "Standing": 0,
+      "Upstairs": 112,
+      "Walking": 99
+    }
+  }
+}

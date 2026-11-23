@@ -1,6 +1,5 @@
 """Sliding-window segmentation and feature extraction."""
 import numpy as np
-import pandas as pd
 
 WINDOW = 80      # ~4 s at the 20 Hz WISDM sampling rate
 STEP = 40        # 50% overlap
@@ -8,12 +7,21 @@ FALL_G_THRESHOLD = 2.5  # impact threshold (multiples of gravity) for the fall-r
 G = 9.81
 
 
-def make_windows(df: pd.DataFrame, window: int = WINDOW, step: int = STEP):
-    """Yield (user, activity, array[window,3]) windows with a single activity label."""
-    for (user, act), g in df.groupby(["user", "activity"], sort=False):
-        xyz = g[["x", "y", "z"]].to_numpy()
-        for s in range(0, len(xyz) - window + 1, step):
-            yield user, act, xyz[s:s + window]
+def make_windows(data: dict, window: int = WINDOW, step: int = STEP):
+    """Yield (user, activity, array[window,3]) windows, each from one user doing one activity.
+
+    `data` is the dict returned by data.load_raw. Groups are visited in order of first appearance.
+    """
+    users, acts = data["user"], data["activity"]
+    xyz = np.column_stack((data["x"], data["y"], data["z"]))
+    names, codes = np.unique(acts, return_inverse=True)
+    key = users.astype(np.int64) * len(names) + codes
+    _, first = np.unique(key, return_index=True)
+    for k in key[np.sort(first)]:
+        rows = xyz[key == k]
+        user, act = int(k // len(names)), str(names[k % len(names)])
+        for s in range(0, len(rows) - window + 1, step):
+            yield user, act, rows[s:s + window]
 
 
 def _corr(a, b):
@@ -48,14 +56,16 @@ def window_features(w: np.ndarray) -> dict:
     return f
 
 
-def build_dataset(df: pd.DataFrame, window: int = WINDOW, step: int = STEP) -> pd.DataFrame:
-    recs = []
-    for user, act, w in make_windows(df, window, step):
-        r = window_features(w)
-        r["user"] = user
-        r["activity"] = act
-        recs.append(r)
-    return pd.DataFrame(recs)
+def build_dataset(data: dict, window: int = WINDOW, step: int = STEP):
+    """Return (X, y, users, feature_names): one row of 32 features per labelled window."""
+    rows, y, users = [], [], []
+    for user, act, w in make_windows(data, window, step):
+        rows.append(window_features(w))
+        y.append(act)
+        users.append(user)
+    names = list(rows[0])
+    X = np.array([[r[n] for n in names] for r in rows])
+    return X, np.array(y), np.array(users), names
 
 
 def fall_risk(w: np.ndarray) -> dict:

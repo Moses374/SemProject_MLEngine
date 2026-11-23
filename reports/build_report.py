@@ -27,7 +27,7 @@ from sklearn.model_selection import GroupShuffleSplit
 from sklearn.pipeline import make_pipeline
 from sklearn.preprocessing import StandardScaler
 
-from mlengine.data import COLUMNS, DEFAULT_PATH
+from mlengine.data import DEFAULT_PATH
 from mlengine.features import FALL_G_THRESHOLD, G, STEP, WINDOW, build_dataset, fall_risk
 from mlengine.data import load_raw
 
@@ -51,15 +51,17 @@ with open(DEFAULT_PATH) as f:
         raw_lines += 1
         if len(line.split(",")) == 6:
             raw_parsed += 1
-df = load_raw()
+data = load_raw()
+df = pd.DataFrame(data)  # report-only convenience; the engine itself uses numpy arrays
 n_clean = len(df)
 acts = ["Walking", "Jogging", "Upstairs", "Downstairs", "Sitting", "Standing"]
 counts = df.activity.value_counts().reindex(acts)
 
-feats = build_dataset(df)
-X = feats.drop(columns=["user", "activity"])
-y = feats["activity"]
-groups = feats["user"]
+Xa, ya, ga, feat_names = build_dataset(data)
+X = pd.DataFrame(Xa, columns=feat_names)
+y = pd.Series(ya)
+groups = pd.Series(ga)
+feats = X
 tr, te = next(GroupShuffleSplit(n_splits=1, test_size=0.25, random_state=SEED).split(X, y, groups))
 test_users = groups.iloc[te].nunique()
 train_users = groups.iloc[tr].nunique()

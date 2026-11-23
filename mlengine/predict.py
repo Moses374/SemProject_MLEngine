@@ -7,7 +7,6 @@ import sys
 
 import joblib
 import numpy as np
-import pandas as pd
 
 from .features import WINDOW, fall_risk, window_features
 
@@ -16,13 +15,17 @@ def predict_window(w: np.ndarray, model_path: str = "models/activity_model.jobli
     if w.shape != (WINDOW, 3):
         raise ValueError(f"expected shape ({WINDOW}, 3), got {w.shape}")
     bundle = joblib.load(model_path)
-    X = pd.DataFrame([window_features(w)])[bundle["features"]]
+    f = window_features(w)
+    X = np.array([[f[name] for name in bundle["features"]]])
     m = bundle["model"]
+    if hasattr(m, "n_jobs"):
+        m.n_jobs = 1  # one window at a time: threading overhead would make it about 3x slower
     proba = m.predict_proba(X)[0]
     i = int(proba.argmax())
-    return {"activity": m.classes_[i], "confidence": float(proba[i]), **fall_risk(w)}
+    return {"activity": str(m.classes_[i]), "confidence": float(proba[i]), **fall_risk(w)}
 
 
 if __name__ == "__main__":
-    df = pd.read_csv(sys.argv[1])
-    print(predict_window(df[["x", "y", "z"]].to_numpy()[-WINDOW:]))
+    cols = np.genfromtxt(sys.argv[1], delimiter=",", names=True)
+    window = np.column_stack((cols["x"], cols["y"], cols["z"]))[-WINDOW:]
+    print(predict_window(window))

@@ -135,6 +135,16 @@ pres.addSection({ title: "Introduction" });
   table(s, rows, 5.8, 1.5, 3.7, [1.1, 2.6], 15);
 }
 
+// ---------------------------------------------------------------- how ML works
+{
+  const s = content("How machine learning works here", null, "Introduction");
+  fig(s, "learn_vs_use", 0.5, 1.15, 9, 3.2, "Learning stage and using stage diagram");
+  bullets(s, [
+    "We never wrote rules for walking. We gave the computer 25,230 labelled examples and it found the patterns.",
+    "Training happens once. The saved model is then reused for every new window.",
+  ], 0.5, 4.4, 9, 0.9, 14);
+}
+
 // ---------------------------------------------------------------- 3 pipeline
 {
   const s = content("The pipeline",
@@ -221,6 +231,25 @@ pres.addSection({ title: "Method" });
   text(s, "32 features per window in total.", 0.5, 4.75, 9, 0.35, { fontSize: 14, italic: true });
 }
 
+// ---------------------------------------------------------------- decision tree
+{
+  const s = content("A decision tree: twenty questions", null, "Method");
+  fig(s, "tree", 0.5, 1.15, 9, 3.3, "Top of a real decision tree from the trained model");
+  bullets(s, [
+    "Real tree from our model: y_mad is how much the up-down reading wiggles.",
+    "Nobody chose these questions. Training picks the ones that best split the labelled examples.",
+  ], 0.5, 4.45, 9, 0.9, 14);
+}
+// ---------------------------------------------------------------- forest
+{
+  const s = content("A forest: 300 trees vote", null, "Method");
+  fig(s, "votes", 0.5, 1.15, 9, 3.0, "Votes of 300 trees on a real Walking window and a real Downstairs window");
+  bullets(s, [
+    "Many trees, each trained on a random sample, vote. A close vote means low confidence.",
+    "On its own training windows the forest scores 100%; on unseen people 85%. We report 85%.",
+  ], 0.5, 4.25, 9, 1.0, 14);
+}
+
 // ---------------------------------------------------------------- 9 evaluation
 {
   const s = content("Evaluating honestly: subject-wise split",
@@ -250,7 +279,7 @@ pres.addSection({ title: "Results" });
   ], 5.6, 1.5, 4.0, [1.9, 1.0, 1.1], 14);
   text(s, "5-fold subject-wise CV (random forest): macro F1 0.791 ± 0.035", 5.6, 3.3, 4.0, 0.9,
        { fontSize: 14 });
-  text(s, "About 85% accuracy on people the model has never seen.", 5.6, 4.1, 4.0, 0.7,
+  text(s, "Unseen people: 85%. Its own training windows: 100% (memorised). We report 85%.", 5.6, 4.0, 4.0, 0.9,
        { fontSize: 14, bold: true });
 }
 
@@ -301,6 +330,29 @@ pres.addSection({ title: "Results" });
   const runs = steps.map((t, i) => ({ text: t, options: { bullet: { type: "number" }, breakLine: i < steps.length - 1,
                                                           paraSpaceAfter: 10 } }));
   text(s, runs, 6.1, 1.8, 3.5, 3.0, { fontSize: 15 });
+}
+
+// ---------------------------------------------------------------- under the hood
+{
+  const s = content("Under the hood", null, "Results");
+  table(s, [
+    ["File", "Job"],
+    ["data.py", "Load and clean the raw file"],
+    ["features.py", "Windows, 32 features, fall rule"],
+    ["train.py", "Compare models, test on unseen people, save"],
+    ["predict.py", "Load the model, classify one window"],
+    ["demo.py + page", "Local server and the app-style page"],
+  ], 0.5, 1.4, 5.0, [1.6, 3.4], 13, 0.5);
+  text(s, "mlengine/ package", 0.5, 1.1, 5.0, 0.3, { fontSize: 13, italic: true });
+  text(s, "The saved model", 5.8, 1.1, 3.7, 0.3, { fontSize: 16, bold: true });
+  bullets(s, [
+    "models/activity_model.joblib, about 22 MB",
+    "300 decision trees, 32 inputs, 6 outputs",
+    "Not on GitHub: rebuilt in about a minute with python -m mlengine.train",
+    "A prediction takes about 30 ms",
+  ], 5.8, 1.5, 3.7, 2.4, 13);
+  text(s, "Demo: browser asks the Python server for a window; the server computes features, asks the model, runs the fall rule and replies with JSON.",
+       0.5, 4.5, 9, 0.7, { fontSize: 14 });
 }
 
 // ---------------------------------------------------------------- 13 limitations

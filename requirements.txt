@@ -1,5 +1,5 @@
-pandas
+# Core engine: training, prediction and the live demo need only these.
+# (joblib, used to save the model, is installed with scikit-learn;
+#  the demo server, file parsing and downloads use the Python standard library.)
 numpy
 scikit-learn
-joblib
-matplotlib

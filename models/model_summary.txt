@@ -1,0 +1,136 @@
+MODEL FILE: models/activity_model.joblib  (22.8 MB)
+Type: RandomForestClassifier
+Activities it can output (6): Downstairs, Jogging, Sitting, Standing, Upstairs, Walking
+Inputs: 32 features per 4-second window, in this order:
+  x_mean, x_std, x_min, x_max, x_mad, x_zcr, x_dom_freq, x_energy, y_mean, y_std, y_min, y_max, y_mad, y_zcr, y_dom_freq, y_energy, z_mean, z_std, z_min, z_max, z_mad, z_zcr, z_dom_freq, z_energy, mag_mean, mag_std, mag_max, mag_min, mag_range, xy_corr, xz_corr, yz_corr
+Trained on all 36 subjects (the deployment model).
+
+Random forest of 300 decision trees
+  average depth 27.1 levels, average 1339 end points per tree
+  803,346 nodes in total (this is the 'knowledge' in the file)
+
+Most important features (share of the forest's decisions):
+  y_mad        0.066
+  z_mean       0.063
+  y_energy     0.062
+  y_std        0.061
+  mag_std      0.058
+  y_max        0.051
+  y_min        0.048
+  y_mean       0.044
+  z_energy     0.039
+  z_min        0.038
+
+Top of the first tree (the real questions the model asks, 3 levels deep):
+|--- y_mad <= 0.92
+|   |--- y_max <= 6.07
+|   |   |--- xy_corr <= -0.47
+|   |   |   |--- x_min <= 5.27
+|   |   |   |   |--- class: Sitting
+|   |   |   |--- x_min >  5.27
+|   |   |   |   |--- truncated branch of depth 2
+|   |   |--- xy_corr >  -0.47
+|   |   |   |--- x_mad <= 1.58
+|   |   |   |   |--- class: Sitting
+|   |   |   |--- x_mad >  1.58
+|   |   |   |   |--- class: Walking
+|   |--- y_max >  6.07
+|   |   |--- x_max <= 3.24
+|   |   |   |--- x_zcr <= 0.07
+|   |   |   |   |--- truncated branch of depth 3
+|   |   |   |--- x_zcr >  0.07
+|   |   |   |   |--- truncated branch of depth 9
+|   |   |--- x_max >  3.24
+|   |   |   |--- z_min <= 0.69
+|   |   |   |   |--- truncated branch of depth 7
+|   |   |   |--- z_min >  0.69
+|   |   |   |   |--- truncated branch of depth 3
+|--- y_mad >  0.92
+|   |--- y_max <= 19.55
+|   |   |--- y_dom_freq <= 6.50
+|   |   |   |--- x_mad <= 5.88
+|   |   |   |   |--- truncated branch of depth 17
+|   |   |   |--- x_mad >  5.88
+|   |   |   |   |--- truncated branch of depth 5
+|   |   |--- y_dom_freq >  6.50
+|   |   |   |--- z_min <= -10.69
+|   |   |   |   |--- truncated branch of depth 17
+|   |   |   |--- z_min >  -10.69
+|   |   |   |   |--- truncated branch of depth 22
+|   |--- y_max >  19.55
+|   |   |--- mag_mean <= 13.14
+|   |   |   |--- y_energy <= 1854.75
+|   |   |   |   |--- truncated branch of depth 17
+|   |   |   |--- y_energy >  1854.75
+|   |   |   |   |--- truncated branch of depth 12
+|   |   |--- mag_mean >  13.14
+|   |   |   |--- y_mean <= 10.57
+|   |   |   |   |--- truncated branch of depth 5
+|   |   |   |--- y_mean >  10.57
+|   |   |   |   |--- truncated branch of depth 4
+
+
+======================================================================
+
+MODEL FILE: models/demo_model.joblib  (16.5 MB)
+Type: RandomForestClassifier
+Activities it can output (6): Downstairs, Jogging, Sitting, Standing, Upstairs, Walking
+Inputs: 32 features per 4-second window, in this order:
+  x_mean, x_std, x_min, x_max, x_mad, x_zcr, x_dom_freq, x_energy, y_mean, y_std, y_min, y_max, y_mad, y_zcr, y_dom_freq, y_energy, z_mean, z_std, z_min, z_max, z_mad, z_zcr, z_dom_freq, z_energy, mag_mean, mag_std, mag_max, mag_min, mag_range, xy_corr, xz_corr, yz_corr
+Trained WITHOUT these subjects (kept for honest testing): [9, 13, 14, 17, 22, 27, 31, 32, 36]
+
+Random forest of 300 decision trees
+  average depth 26.2 levels, average 944 end points per tree
+  566,104 nodes in total (this is the 'knowledge' in the file)
+
+Most important features (share of the forest's decisions):
+  z_mean       0.070
+  y_mad        0.063
+  y_energy     0.061
+  y_std        0.055
+  y_min        0.053
+  y_max        0.052
+  mag_std      0.051
+  y_mean       0.047
+  z_min        0.039
+  z_energy     0.035
+
+Top of the first tree (the real questions the model asks, 3 levels deep):
+|--- y_mad <= 0.98
+|   |--- y_max <= 6.07
+|   |   |--- class: Sitting
+|   |--- y_max >  6.07
+|   |   |--- z_mean <= 3.31
+|   |   |   |--- x_min <= 3.40
+|   |   |   |   |--- truncated branch of depth 6
+|   |   |   |--- x_min >  3.40
+|   |   |   |   |--- truncated branch of depth 2
+|   |   |--- z_mean >  3.31
+|   |   |   |--- xy_corr <= -0.48
+|   |   |   |   |--- class: Standing
+|   |   |   |--- xy_corr >  -0.48
+|   |   |   |   |--- class: Sitting
+|--- y_mad >  0.98
+|   |--- y_energy <= 1751.42
+|   |   |--- mag_max <= 23.01
+|   |   |   |--- y_energy <= 385.07
+|   |   |   |   |--- truncated branch of depth 14
+|   |   |   |--- y_energy >  385.07
+|   |   |   |   |--- truncated branch of depth 23
+|   |   |--- mag_max >  23.01
+|   |   |   |--- xz_corr <= 0.19
+|   |   |   |   |--- truncated branch of depth 21
+|   |   |   |--- xz_corr >  0.19
+|   |   |   |   |--- truncated branch of depth 14
+|   |--- y_energy >  1751.42
+|   |   |--- y_mad <= 6.31
+|   |   |   |--- y_max <= 19.06
+|   |   |   |   |--- truncated branch of depth 4
+|   |   |   |--- y_max >  19.06
+|   |   |   |   |--- truncated branch of depth 9
+|   |   |--- y_mad >  6.31
+|   |   |   |--- z_min <= -3.68
+|   |   |   |   |--- truncated branch of depth 16
+|   |   |   |--- z_min >  -3.68
+|   |   |   |   |--- truncated branch of depth 4
+

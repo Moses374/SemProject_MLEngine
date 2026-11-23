@@ -27,7 +27,7 @@ d. First 15 and last 20 rows merged into `df_sample`
 ## Running it
 
 ```
-pip install -r requirements.txt
+pip install -r requirements-extras.txt   # the notebook needs pandas and jupyter
 jupyter nbconvert --to notebook --execute --inplace WISDM_Exploration.ipynb
 ```
 
@@ -43,12 +43,27 @@ The `mlengine/` package turns the raw accelerometer stream into an activity clas
 | `mlengine/features.py` | 4 s sliding windows (80 samples, 50% overlap), 32 time/frequency features per window, fall-risk rule |
 | `mlengine/train.py` | Train baseline, logistic regression and random forest; evaluate; save model and reports |
 | `mlengine/predict.py` | Classify one 80-sample window and report fall risk |
+| `mlengine/describe.py` | Show what is inside the saved model files (they are binary) |
 | `mlengine/demo.py` | Local web demo (page in `mlengine/demo_page.html`) |
 
 ```
 python -m mlengine.train                 # writes models/ and reports/
 python -m mlengine.predict readings.csv  # CSV with x,y,z columns (m/s^2, 20 Hz)
 ```
+
+### Dependencies
+
+The engine is deliberately small. `mlengine/` needs only **numpy** (arrays and the FFT) and **scikit-learn** (the models; it also provides `joblib`, used to save them). Everything else is the Python standard library: file parsing, the demo's web server and the download. `pandas`, `matplotlib`, `reportlab` and `jupyter` are only for the optional extras (the Deliverable 1 notebook and the report/guide builders) and are listed separately in `requirements-extras.txt`.
+
+### Looking inside the saved models
+
+`models/*.joblib` are binary files, so a text editor shows gibberish. Training writes a readable summary next to them:
+
+```
+python -m mlengine.describe      # prints it and saves models/model_summary.txt
+```
+
+It shows the model type, the 6 activities, the 32 inputs, the number of trees and nodes, the most important features, and the real questions at the top of the first tree. The `.joblib` files themselves are not on GitHub (large, and rebuilt by `python -m mlengine.train`), but `models/model_summary.txt` is.
 
 ### Live demo
 

@@ -14,7 +14,6 @@ from urllib.parse import parse_qs, urlparse
 
 import joblib
 import numpy as np
-import pandas as pd
 
 from .data import load_raw
 from .features import G, WINDOW, fall_risk, make_windows, window_features
@@ -27,17 +26,21 @@ class Engine:
     def __init__(self, model_path="models/demo_model.joblib", data_path="WISDM_ar_v1.1_raw.txt"):
         bundle = joblib.load(model_path)
         self.model, self.features = bundle["model"], bundle["features"]
+        if hasattr(self.model, "n_jobs"):
+            self.model.n_jobs = 1  # one window at a time: faster than the parallel setting it was saved with
         self.test_users = bundle["test_users"]
-        df = load_raw(data_path)
-        df = df[df["user"].isin(self.test_users)]
+        data = load_raw(data_path)
+        held_out = np.isin(data["user"], self.test_users)
+        data = {k: v[held_out] for k, v in data.items()}
         self.pool = {a: [] for a in ACTIVITIES}
         # non-overlapping windows from held-out subjects only
-        for user, act, w in make_windows(df, WINDOW, WINDOW):
+        for user, act, w in make_windows(data, WINDOW, WINDOW):
             self.pool[act].append((user, w))
         self.rng = random.Random()
 
     def classify(self, w: np.ndarray) -> dict:
-        X = pd.DataFrame([window_features(w)])[self.features]
+        f = window_features(w)
+        X = np.array([[f[name] for name in self.features]])
         proba = self.model.predict_proba(X)[0]
         probs = {c: float(p) for c, p in zip(self.model.classes_, proba)}
         top = max(probs, key=probs.get)

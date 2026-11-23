@@ -1,0 +1,9 @@
+# Optional, only for the extras. The engine in mlengine/ does not use them.
+#   pandas + jupyter: the Deliverable 1 notebook (WISDM_Exploration.ipynb)
+#   matplotlib, reportlab, pillow, pandas: building the report PDF and guide (reports/build_*.py)
+-r requirements.txt
+pandas
+jupyter
+matplotlib
+reportlab
+pillow

@@ -6,8 +6,8 @@
       "macro_f1": 0.0937063964162444
     },
     "logistic regression": {
-      "accuracy": 0.829451425068955,
-      "macro_f1": 0.7488037657076702
+      "accuracy": 0.8297578915108795,
+      "macro_f1": 0.7497503863895391
     },
     "random forest": {
       "accuracy": 0.8493717437940546,
@@ -18,5 +18,22 @@
       "macro_f1_std": 0.035196531000158265
     }
   },
-  "report": "              precision    recall  f1-score   support\n\n  Downstairs       0.78      0.34      0.48       676\n     Jogging       0.96      0.97      0.96      1832\n     Sitting       0.76      0.80      0.78       255\n    Standing       0.78      0.81      0.80       225\n    Upstairs       0.61      0.86      0.72       986\n     Walking       0.92      0.90      0.91      2552\n\n    accuracy                           0.85      6526\n   macro avg       0.80      0.78      0.77      6526\nweighted avg       0.86      0.85      0.84      6526\n"
+  "report": "              precision    recall  f1-score   support\n\n  Downstairs       0.78      0.34      0.48       676\n     Jogging       0.96      0.97      0.96      1832\n     Sitting       0.76      0.80      0.78       255\n    Standing       0.78      0.81      0.80       225\n    Upstairs       0.61      0.86      0.72       986\n     Walking       0.92      0.90      0.91      2552\n\n    accuracy                           0.85      6526\n   macro avg       0.80      0.78      0.77      6526\nweighted avg       0.86      0.85      0.84      6526\n",
+  "top_features": {
+    "z_mean": 0.0698026538741515,
+    "y_mad": 0.06344693775319689,
+    "y_energy": 0.06092027495955614,
+    "y_std": 0.05509295722704066,
+    "y_min": 0.05327750446277775,
+    "y_max": 0.05215695917017191,
+    "mag_std": 0.050698071299619216,
+    "y_mean": 0.04717066759773781,
+    "z_min": 0.038784184677650636,
+    "z_energy": 0.03477464597781755,
+    "mag_max": 0.03422866082140198,
+    "z_std": 0.03417553793441909,
+    "z_mad": 0.03274635537261765,
+    "x_energy": 0.0322683806502254,
+    "y_dom_freq": 0.03202707368791977
+  }
 }
