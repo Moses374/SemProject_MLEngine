@@ -26,7 +26,9 @@ ICS 3202 Semester Project. Moses Kibet (183638), Collins Jared (184587), Kathy A
 
 This notebook runs our whole machine learning engine from start to finish and **explains every step**. It uses the same code that is in the project's `mlengine/` folder on GitHub, so what you see here is exactly what the project does.
 
-**How to use it:** choose *Runtime > Run all* (about 6 to 8 minutes), or run the cells one at a time while presenting. Each section has a short explanation, then the code, then its result.
+**The models are our own code.** The majority baseline, softmax (logistic) regression, decision tree and random forest are written from scratch with NumPy in `mlengine/models.py`. scikit-learn's versions are trained only as a reference to check ours against, and scikit-learn also provides the train/test split and the scoring functions.
+
+**How to use it:** choose *Runtime > Run all*, or run the cells one at a time while presenting. Each section has a short explanation, then the code, then its result. Training our own forest takes a few minutes.
 
 | Step | What happens |
 |---|---|
@@ -35,9 +37,9 @@ This notebook runs our whole machine learning engine from start to finish and **
 | 3 | Cut it into 4-second windows |
 | 4 | Turn each window into 32 summary numbers (features) |
 | 5 | Split the people into train and test groups |
-| 6 | Train three models and compare them |
+| 6 | Train our three models, and check them against scikit-learn |
 | 7 | Evaluate honestly and look at the mistakes |
-| 8 | Look inside the trained model |
+| 8 | Look inside the trained model: how our trees learn and vote |
 | 9 | Save the models and make a prediction |
 | 10 | The fall rule |
 | 11 | The live demo (two phone screens) |
@@ -61,9 +63,8 @@ print("Working folder:", os.getcwd())
 print("Project files:", [f for f in sorted(os.listdir(".")) if not f.startswith(".")])
 """)
 md("""
-Our engine needs only two libraries, **numpy** (arrays and maths) and **scikit-learn** (the machine learning models).
-We pin the exact versions we used so the numbers match our report. Newer scikit-learn versions grow slightly different
-forests: in our test they gave 81.7% accuracy instead of 84.9%.
+Our models need only **numpy** (arrays and maths) plus **joblib** (to train trees in parallel and to save models). **scikit-learn** is used for
+the person-wise split, the scoring functions and the reference models. We pin the versions we used so the numbers match our report.
 """)
 code("""
 import numpy, sklearn
@@ -74,7 +75,7 @@ print("numpy", have[0], "| scikit-learn", have[1])
 if have == TESTED:
     print("\\nVersions match the report, so the numbers below will match the slides.")
 else:
-    print("\\nThese are not the versions our report was produced with, so results may differ by a few points.")
+    print("\\nThese are not the versions our report was produced with, so results may differ slightly.")
     print("To reproduce exactly: run  !pip install -q numpy==2.3.3 scikit-learn==1.7.2")
     print("then choose Runtime > Restart session, and run all cells again.")
 """)
@@ -193,37 +194,86 @@ print("Overlap between the two groups:", set(train_people) & set(test_people) or
 
 # ---------------------------------------------------------------- 6 train
 md("""
-## 6. Train three models and compare them
+## 6. Train our three models and compare them
 
-* **Baseline:** always guesses the most common activity. Any real model must beat it.
-* **Logistic regression:** a simple linear model on standardised features.
-* **Random forest:** 300 decision trees that vote.
+These classes are **our own code** (`mlengine/models.py`, written with NumPy):
+
+* **Baseline (`MajorityClassifier`):** always guesses the most common activity. Any real model must beat it.
+* **Logistic regression (`SoftmaxRegression`):** a simple linear model, trained by gradient descent with the Adam optimiser.
+* **Random forest (`RandomForest`):** 300 decision trees that vote.
 
 *Training* means showing the model the labelled training windows so it finds the patterns itself.
 """)
 code("""
-from sklearn.dummy import DummyClassifier
-from sklearn.ensemble import RandomForestClassifier
-from sklearn.linear_model import LogisticRegression
+import time
 from sklearn.metrics import accuracy_score, f1_score
-from sklearn.pipeline import make_pipeline
-from sklearn.preprocessing import StandardScaler
+from mlengine.models import MajorityClassifier, SoftmaxRegression, RandomForest
 
 models = {
-    "baseline (majority)": DummyClassifier(strategy="most_frequent"),
-    "logistic regression": make_pipeline(StandardScaler(), LogisticRegression(max_iter=2000)),
-    "random forest": RandomForestClassifier(n_estimators=300, n_jobs=-1, random_state=SEED, class_weight="balanced"),
+    "baseline (majority)": MajorityClassifier(),
+    "logistic regression": SoftmaxRegression(),
+    "random forest": RandomForest(n_estimators=300, random_state=SEED, class_weight="balanced"),
 }
 results = {}
 for name, m in models.items():
+    t0 = time.perf_counter()
     m.fit(X[train_idx], y[train_idx])
+    secs = time.perf_counter() - t0
     pred = m.predict(X[test_idx])
     results[name] = (accuracy_score(y[test_idx], pred), f1_score(y[test_idx], pred, average="macro"))
-    print(f"{name:22s} accuracy={results[name][0]:.3f}   macro F1={results[name][1]:.3f}")
+    print(f"{name:22s} accuracy={results[name][0]:.3f}   macro F1={results[name][1]:.3f}   (trained in {secs:.0f} s)")
 """)
 md("""
 *Say this:* "Both real models beat the baseline by a wide margin, and the random forest is best, so that is the one we keep.
 Macro F1 averages the score over all six activities equally, so small classes such as Standing count as much as Walking."
+
+### Do our models agree with scikit-learn?
+
+Writing models from scratch is only trustworthy if they match a well-tested library. So we train scikit-learn's versions on the **same split**
+and compare. This is a check only: scikit-learn's models are never used by the engine.
+""")
+code("""
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.linear_model import LogisticRegression
+from sklearn.pipeline import make_pipeline
+from sklearn.preprocessing import StandardScaler
+
+references = {
+    "logistic regression": make_pipeline(StandardScaler(), LogisticRegression(max_iter=2000)),
+    "random forest": RandomForestClassifier(n_estimators=300, n_jobs=-1, random_state=SEED, class_weight="balanced"),
+}
+print(f"{'':22s}{'ours (acc / macro F1)':>26s}{'scikit-learn (acc / macro F1)':>34s}")
+for name, ref in references.items():
+    ref.fit(X[train_idx], y[train_idx])
+    p = ref.predict(X[test_idx])
+    ra, rf1 = accuracy_score(y[test_idx], p), f1_score(y[test_idx], p, average="macro")
+    print(f"{name:22s}{results[name][0]:>14.3f} / {results[name][1]:.3f}{ra:>20.3f} / {rf1:.3f}")
+""")
+md("""
+The two columns are within a fraction of a percentage point, so our from-scratch models learn essentially the same thing as the library's.
+""")
+
+md("""
+### How does our random forest learn? (the real code)
+
+Each tree is built one question at a time. At every step the tree:
+
+1. looks at a **random handful of features** (the square root of 32, so 5) and tries **every possible threshold** for each, such as "is `y_mad <= 0.98`?";
+2. keeps the question that makes the two resulting groups **purest**, measured by **Gini impurity** (0 means all one activity);
+3. repeats on each side until a group is pure, then stops. That final group is a **leaf** that remembers its mix of activities.
+
+The forest trains each tree on a **bootstrap sample** (rows drawn at random with replacement) and gives rare activities more weight (`class_weight="balanced"`).
+To classify, every tree gives the activity mix of the leaf the window falls into, and the forest **averages** them.
+""")
+code("""
+from mlengine.models import _fit_tree, DecisionTree
+print(inspect.getsource(_fit_tree))
+print(inspect.getsource(RandomForest.fit))
+print(inspect.getsource(RandomForest.predict_proba))
+""")
+code("""
+# The heart of it: how a tree picks its questions (Gini impurity, every threshold of each candidate feature)
+print(inspect.getsource(DecisionTree.fit_encoded))
 """)
 
 # ---------------------------------------------------------------- 7 evaluate
@@ -261,26 +311,26 @@ md("""
 ## 8. Look inside the trained model
 
 A random forest is 300 decision trees. Each tree is a game of twenty questions about the features. Here are the real questions at
-the top of the first tree:
+the top of the first tree (`to_text` is a method we wrote on our `DecisionTree` class):
 """)
 code("""
-from sklearn.tree import export_text
-
-tree0 = rf.estimators_[0]
-print(export_text(tree0, feature_names=names, class_names=[str(c) for c in rf.classes_], max_depth=2))
-print(f"Trees: {len(rf.estimators_)} | average depth: {np.mean([t.get_depth() for t in rf.estimators_]):.1f} levels")
+tree0 = rf.trees_[0]
+print(tree0.to_text(names, [str(c) for c in rf.classes_], max_depth=2))
+print(f"Trees: {len(rf.trees_)} | average depth: {np.mean([t.depth_ for t in rf.trees_]):.1f} levels"
+      f" | average end points per tree: {np.mean([t.n_leaves for t in rf.trees_]):.0f}"
+      f" | nodes in total: {sum(t.node_count for t in rf.trees_):,}")
 """)
 code("""
-# How the 300 trees vote on one unseen Downstairs window
+# How the 300 trees see one unseen Downstairs window (each tree's top choice)
 i = next(k for k in test_idx if y[k] == "Downstairs")
-votes = [rf.classes_[int(t.predict(X[[i]])[0])] for t in rf.estimators_]
+votes = [rf.classes_[int(t.predict_proba_encoded(X[[i]]).argmax())] for t in rf.trees_]
 vals, cnt = np.unique(votes, return_counts=True)
 print("Real window: Downstairs | forest answer:", rf.predict(X[[i]])[0])
 for v, c in sorted(zip(vals, cnt), key=lambda p: -p[1]):
     print(f"  {v:<11} {c:>3} trees")
 """)
 code("""
-# Which features matter most?
+# Which features matter most? (share of the Gini improvement each feature provides)
 order = np.argsort(rf.feature_importances_)[::-1][:10]
 for k in order:
     print(f"  {names[k]:<10} {rf.feature_importances_[k]:.3f}")
@@ -299,7 +349,7 @@ import joblib, time
 os.makedirs("models", exist_ok=True)
 joblib.dump({"model": rf, "features": names, "test_users": [int(u) for u in test_people]},
             "models/demo_model.joblib", compress=3)            # trained on the training people only
-full = RandomForestClassifier(n_estimators=300, n_jobs=-1, random_state=SEED, class_weight="balanced").fit(X, y)
+full = RandomForest(n_estimators=300, random_state=SEED, class_weight="balanced").fit(X, y)
 joblib.dump({"model": full, "features": names}, "models/activity_model.joblib", compress=3)   # all 36 people
 for f in sorted(os.listdir("models")):
     print(f"{f:<26} {os.path.getsize('models/' + f) / 1e6:5.1f} MB")
@@ -387,7 +437,8 @@ md("""
 ## Summary
 
 * Cleaned 1,019,496 readings into 25,230 labelled 4-second windows with 32 features each.
-* Tested on people the model had never seen: about **85% accuracy** and **0.775 macro F1**, against 39% and 0.09 for the baseline.
+* The models are our own NumPy code (`mlengine/models.py`) and match scikit-learn's versions within a fraction of a point.
+* Tested on people the model had never seen: about **85% accuracy** and **0.778 macro F1**, against 39% and 0.09 for the baseline.
 * The weak spot is Downstairs; the fall rule is a transparent, unvalidated first step.
 * Reproduce anywhere: `pip install -r requirements.txt`, then `python -m mlengine.train` and `python -m mlengine.demo`.
 
