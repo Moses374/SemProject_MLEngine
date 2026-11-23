@@ -9,7 +9,7 @@ from reportlab.lib.enums import TA_CENTER, TA_JUSTIFY
 from reportlab.lib.pagesizes import A4
 from reportlab.lib.styles import ParagraphStyle
 from reportlab.lib.units import cm
-from reportlab.platypus import KeepTogether, PageBreak, Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
+from reportlab.platypus import KeepTogether, PageBreak, Paragraph, Preformatted, SimpleDocTemplate, Spacer, Table, TableStyle
 
 D = json.load(open("reports/script.json", encoding="utf-8"))
 SLIDES, TERMS, QA, DEMO, BACK = D["slides"], D["terms"], D["qa"], D["demo"], D["backend"]
@@ -159,6 +159,15 @@ P("7. Questions you are likely to be asked", h1)
 table([["Question", "Answer", "Who answers"]] + [[q, a, o] for q, a, o in QA], [4.4, 10.2, 2.4])
 
 # ---- 6 tips
+P("9. Colab and the code walkthrough", h1)
+P("<b>Colab notebook</b> (runs the whole project step by step and the live demo in a browser, nothing to install):")
+S.append(Preformatted("https://colab.research.google.com/github/Moses374/SemProject_MLEngine/blob/master/MLEngine_Colab.ipynb",
+                      ParagraphStyle("u", fontName="Courier", fontSize=8, leading=10)))
+S.append(Spacer(1, 6))
+P("Choose Runtime, then Run all. Try it once before the day. It is the best plan B if the laptop fails. "
+  "<b>Code walkthrough:</b> reports/Code_Walkthrough.pdf explains every file with the real code, who explains it, "
+  "a worked example and questions about the code.")
+
 P("8. Preparing and delivering", h1)
 for t in ["<b>Rehearse your own part out loud</b> at least twice, then once all together to practise the handoffs and the demo.",
           "<b>Look at the audience, not the screen.</b> Glance at the slide only to point to something.",

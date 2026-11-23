@@ -51,6 +51,12 @@ python -m mlengine.train                 # writes models/ and reports/
 python -m mlengine.predict readings.csv  # CSV with x,y,z columns (m/s^2, 20 Hz)
 ```
 
+### Run it in Google Colab
+
+[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/Moses374/SemProject_MLEngine/blob/master/MLEngine_Colab.ipynb)
+
+`MLEngine_Colab.ipynb` runs the whole project step by step with explanations (data, windows, features, fair split, training, evaluation, the inside of the model, the fall rule) and starts the live demo inside the notebook. It clones this repository, so it runs exactly the code in `mlengine/`. Choose *Runtime > Run all*. `reports/Code_Walkthrough.pdf` explains every code file.
+
 ### Dependencies
 
 The engine is deliberately small. `mlengine/` needs only **numpy** (arrays and the FFT) and **scikit-learn** (the models; it also provides `joblib`, used to save them). Everything else is the Python standard library: file parsing, the demo's web server and the download. The two versions are pinned in `requirements.txt` on purpose: with newer scikit-learn releases the same random seed grows slightly different forests (we measured 81.7% instead of 84.9% accuracy), so unpinned installs would not reproduce the numbers in the report. `pandas`, `matplotlib`, `reportlab` and `jupyter` are only for the optional extras (the Deliverable 1 notebook and the report/guide builders) and are listed separately in `requirements-extras.txt`.

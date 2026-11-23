@@ -390,7 +390,7 @@
       ],
       [
         "Nothing works on the day",
-        "Use the backup screenshot on the demo slide and say: here is a capture of the same demo. Then carry on. A second screenshot is in reports/fig/demo_jogging.png."
+        "Use the backup screenshot on the demo slide and say: here is a capture of the same demo. Then carry on. Better: open the Colab notebook (link in Section 9) on any computer or phone with a browser and run it; it runs the same code and the same demo. A second screenshot is in reports/fig/demo_jogging.png."
       ]
     ]
   },
