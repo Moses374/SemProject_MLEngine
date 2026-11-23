@@ -42,7 +42,8 @@ The `mlengine/` package turns the raw accelerometer stream into an activity clas
 | `mlengine/data.py` | Load the raw file; drop malformed rows, NaNs, zero timestamps and duplicates |
 | `mlengine/features.py` | 4 s sliding windows (80 samples, 50% overlap), 32 time/frequency features per window, fall-risk rule |
 | `mlengine/models.py` | Our own NumPy implementations: majority baseline, softmax (multinomial logistic) regression, CART decision tree and random forest |
-| `mlengine/train.py` | Train our baseline, logistic regression and random forest, plus scikit-learn's versions as a reference; evaluate; save model and reports |
+| `mlengine/evaluation.py` | Our own person-wise train/test split, cross-validation folds and scoring (accuracy, macro F1, classification report, confusion matrix) |
+| `mlengine/train.py` | Train our baseline, logistic regression and random forest; evaluate on unseen people; save models and metrics |
 | `mlengine/predict.py` | Classify one 80-sample window and report fall risk |
 | `mlengine/describe.py` | Show what is inside the saved model files (they are binary) |
 | `mlengine/demo.py` | Local web demo (page in `mlengine/demo_page.html`) |
@@ -60,7 +61,7 @@ python -m mlengine.predict readings.csv  # CSV with x,y,z columns (m/s^2, 20 Hz)
 
 ### Dependencies
 
-The engine is deliberately small. `mlengine/` needs only **numpy** (arrays and the FFT) and **scikit-learn** (the models; it also provides `joblib`, used to save them). Everything else is the Python standard library: file parsing, the demo's web server and the download. The two versions are pinned in `requirements.txt` on purpose: with newer scikit-learn releases the same random seed grows slightly different forests (we measured 81.7% instead of 84.9% accuracy), so unpinned installs would not reproduce the numbers in the report. `pandas`, `matplotlib`, `reportlab` and `jupyter` are only for the optional extras (the Deliverable 1 notebook and the report/guide builders) and are listed separately in `requirements-extras.txt`.
+The engine is deliberately small and uses **no machine-learning library**. `mlengine/` needs only **numpy** (arrays, maths and the FFT) and **joblib** (trains the trees in parallel and saves the models). The classifiers (`models.py`) and the train/test splitting and scoring (`evaluation.py`) are our own code. Everything else is the Python standard library: file parsing, the demo's web server and the download. The versions are pinned in `requirements.txt` to the ones the results were produced with. `pandas`, `matplotlib`, `reportlab` and `jupyter` are only for the optional extras (the Deliverable 1 notebook and the report/guide builders) and are listed separately in `requirements-extras.txt`.
 
 ### Looking inside the saved models
 
@@ -85,15 +86,15 @@ An app-style demo with two phone screens. Mary's phone names her current activit
 
 Evaluation holds out whole subjects (25% of the 36), so scores reflect performance on people the model has never seen. Windows from one person never appear in both train and test.
 
-The classifiers are implemented from scratch in `mlengine/models.py`. scikit-learn's versions are trained on the same split only to check our implementations against.
+The classifiers are implemented from scratch in `mlengine/models.py`, and the split and scoring in `mlengine/evaluation.py`. During development we checked them against scikit-learn's versions on the same split (logistic regression 0.830 / 0.750 and random forest 0.849 / 0.775 accuracy / macro F1, within 0.003 of ours), then removed scikit-learn from the project.
 
-| Model | Accuracy | Macro F1 | scikit-learn reference (acc / macro F1) |
-|---|---|---|---|
-| Majority-class baseline | 0.391 | 0.094 | |
-| Logistic regression | 0.829 | 0.747 | 0.830 / 0.750 |
-| **Random forest** (300 trees) | **0.850** | **0.778** | 0.849 / 0.775 |
+| Model | Accuracy | Macro F1 |
+|---|---|---|
+| Majority-class baseline | 0.391 | 0.094 |
+| Logistic regression | 0.829 | 0.747 |
+| **Random forest** (300 trees) | **0.850** | **0.778** |
 
-Random forest 5-fold subject-wise CV macro-F1: 0.791 +/- 0.036. Plots are in `reports/` (`confusion_matrix.png`, `feature_importance.png`) and metrics in `reports/metrics.json`.
+Random forest 5-fold subject-wise CV macro-F1: 0.791 +/- 0.036. Metrics are in `reports/metrics.json`; the plots are built by `reports/build_report.py` into `reports/fig/`.
 
 Jogging and Walking are classified well (F1 0.97 and 0.91). Downstairs is the weak class (recall 0.37) and is mostly confused with Upstairs and Walking, which is typical for waist/pocket accelerometer data. Sitting and Standing are separated mainly by the phone's orientation (gravity on each axis).
 

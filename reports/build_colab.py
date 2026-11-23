@@ -26,7 +26,7 @@ ICS 3202 Semester Project. Moses Kibet (183638), Collins Jared (184587), Kathy A
 
 This notebook runs our whole machine learning engine from start to finish and **explains every step**. It uses the same code that is in the project's `mlengine/` folder on GitHub, so what you see here is exactly what the project does.
 
-**The models are our own code.** The majority baseline, softmax (logistic) regression, decision tree and random forest are written from scratch with NumPy in `mlengine/models.py`. scikit-learn's versions are trained only as a reference to check ours against, and scikit-learn also provides the train/test split and the scoring functions.
+**No machine-learning library is used.** The majority baseline, softmax (logistic) regression, decision tree and random forest are written from scratch with NumPy in `mlengine/models.py`, and the person-wise train/test split and the scoring functions are our own code in `mlengine/evaluation.py`.
 
 **How to use it:** choose *Runtime > Run all*, or run the cells one at a time while presenting. Each section has a short explanation, then the code, then its result. Training our own forest takes a few minutes.
 
@@ -37,7 +37,7 @@ This notebook runs our whole machine learning engine from start to finish and **
 | 3 | Cut it into 4-second windows |
 | 4 | Turn each window into 32 summary numbers (features) |
 | 5 | Split the people into train and test groups |
-| 6 | Train our three models, and check them against scikit-learn |
+| 6 | Train our three models and compare them |
 | 7 | Evaluate honestly and look at the mistakes |
 | 8 | Look inside the trained model: how our trees learn and vote |
 | 9 | Save the models and make a prediction |
@@ -63,20 +63,20 @@ print("Working folder:", os.getcwd())
 print("Project files:", [f for f in sorted(os.listdir(".")) if not f.startswith(".")])
 """)
 md("""
-Our models need only **numpy** (arrays and maths) plus **joblib** (to train trees in parallel and to save models). **scikit-learn** is used for
-the person-wise split, the scoring functions and the reference models. We pin the versions we used so the numbers match our report.
+The whole engine needs only **numpy** (arrays and maths) plus **joblib** (to train trees in parallel and to save models). There is no machine-learning
+library. We note the versions we used so the numbers match our report.
 """)
 code("""
-import numpy, sklearn
+import numpy, joblib
 
-TESTED = ("2.3.3", "1.7.2")
-have = (numpy.__version__, sklearn.__version__)
-print("numpy", have[0], "| scikit-learn", have[1])
+TESTED = ("2.3.3", "1.5.2")
+have = (numpy.__version__, joblib.__version__)
+print("numpy", have[0], "| joblib", have[1])
 if have == TESTED:
     print("\\nVersions match the report, so the numbers below will match the slides.")
 else:
     print("\\nThese are not the versions our report was produced with, so results may differ slightly.")
-    print("To reproduce exactly: run  !pip install -q numpy==2.3.3 scikit-learn==1.7.2")
+    print("To reproduce exactly: run  !pip install -q numpy==2.3.3 joblib==1.5.2")
     print("then choose Runtime > Restart session, and run all cells again.")
 """)
 
@@ -181,10 +181,10 @@ If we shuffled windows randomly, near-identical windows from the same person wou
 would be inflated. A real user is a **new person**, so we hold out whole people: about 75% for training, 25% for testing.
 """)
 code("""
-from sklearn.model_selection import GroupShuffleSplit
+from mlengine.evaluation import group_shuffle_split
 from mlengine.train import SEED
 
-train_idx, test_idx = next(GroupShuffleSplit(n_splits=1, test_size=0.25, random_state=SEED).split(X, y, users))
+train_idx, test_idx = group_shuffle_split(users, test_size=0.25, seed=SEED)
 train_people, test_people = sorted(set(users[train_idx])), sorted(set(users[test_idx]))
 print(f"Training: {len(train_people)} people, {len(train_idx):,} windows")
 print(f"Testing:  {len(test_people)} people, {len(test_idx):,} windows")
@@ -206,7 +206,7 @@ These classes are **our own code** (`mlengine/models.py`, written with NumPy):
 """)
 code("""
 import time
-from sklearn.metrics import accuracy_score, f1_score
+from mlengine.evaluation import accuracy, macro_f1
 from mlengine.models import MajorityClassifier, SoftmaxRegression, RandomForest
 
 models = {
@@ -220,37 +220,15 @@ for name, m in models.items():
     m.fit(X[train_idx], y[train_idx])
     secs = time.perf_counter() - t0
     pred = m.predict(X[test_idx])
-    results[name] = (accuracy_score(y[test_idx], pred), f1_score(y[test_idx], pred, average="macro"))
+    results[name] = (accuracy(y[test_idx], pred), macro_f1(y[test_idx], pred))
     print(f"{name:22s} accuracy={results[name][0]:.3f}   macro F1={results[name][1]:.3f}   (trained in {secs:.0f} s)")
 """)
 md("""
 *Say this:* "Both real models beat the baseline by a wide margin, and the random forest is best, so that is the one we keep.
 Macro F1 averages the score over all six activities equally, so small classes such as Standing count as much as Walking."
 
-### Do our models agree with scikit-learn?
-
-Writing models from scratch is only trustworthy if they match a well-tested library. So we train scikit-learn's versions on the **same split**
-and compare. This is a check only: scikit-learn's models are never used by the engine.
-""")
-code("""
-from sklearn.ensemble import RandomForestClassifier
-from sklearn.linear_model import LogisticRegression
-from sklearn.pipeline import make_pipeline
-from sklearn.preprocessing import StandardScaler
-
-references = {
-    "logistic regression": make_pipeline(StandardScaler(), LogisticRegression(max_iter=2000)),
-    "random forest": RandomForestClassifier(n_estimators=300, n_jobs=-1, random_state=SEED, class_weight="balanced"),
-}
-print(f"{'':22s}{'ours (acc / macro F1)':>26s}{'scikit-learn (acc / macro F1)':>34s}")
-for name, ref in references.items():
-    ref.fit(X[train_idx], y[train_idx])
-    p = ref.predict(X[test_idx])
-    ra, rf1 = accuracy_score(y[test_idx], p), f1_score(y[test_idx], p, average="macro")
-    print(f"{name:22s}{results[name][0]:>14.3f} / {results[name][1]:.3f}{ra:>20.3f} / {rf1:.3f}")
-""")
-md("""
-The two columns are within a fraction of a percentage point, so our from-scratch models learn essentially the same thing as the library's.
+We also checked our models against scikit-learn's versions during development, on this same split: their logistic regression scored 0.830 / 0.750
+(accuracy / macro F1) and their random forest 0.849 / 0.775, within 0.003 of ours. After that check we removed scikit-learn from the project.
 """)
 
 md("""
@@ -281,14 +259,22 @@ md("""
 ## 7. Evaluate honestly and look at the mistakes
 """)
 code("""
-from sklearn.metrics import classification_report, ConfusionMatrixDisplay
+from mlengine.evaluation import classification_report, confusion_matrix
 
 rf = models["random forest"]
 pred = rf.predict(X[test_idx])
 print(classification_report(y[test_idx], pred))
 
+# Confusion matrix: rows = the real activity, columns = what the model said
+cm, labels = confusion_matrix(y[test_idx], pred)
 fig, ax = plt.subplots(figsize=(6, 5))
-ConfusionMatrixDisplay.from_predictions(y[test_idx], pred, ax=ax, xticks_rotation=40, cmap="Greys")
+ax.imshow(cm / cm.sum(axis=1, keepdims=True), cmap="Greys", vmin=0, vmax=1)
+ax.set_xticks(range(len(labels))); ax.set_xticklabels(labels, rotation=40, ha="right")
+ax.set_yticks(range(len(labels))); ax.set_yticklabels(labels)
+for r in range(len(labels)):
+    for c in range(len(labels)):
+        ax.text(c, r, cm[r, c], ha="center", va="center", color="white" if cm[r, c] / cm[r].sum() > 0.5 else "black")
+ax.set_xlabel("Predicted"); ax.set_ylabel("Actual")
 ax.set_title("Random forest on people it never saw")
 plt.tight_layout(); plt.show()
 """)
@@ -298,8 +284,8 @@ how many did it find? **Downstairs** is the weak class (low recall): it looks ve
 """)
 code("""
 # Overfitting check: the forest on its own training windows vs on unseen people
-print(f"Accuracy on the windows it trained on : {accuracy_score(y[train_idx], rf.predict(X[train_idx])):.3f}")
-print(f"Accuracy on people it has never seen  : {accuracy_score(y[test_idx], pred):.3f}")
+print(f"Accuracy on the windows it trained on : {accuracy(y[train_idx], rf.predict(X[train_idx])):.3f}")
+print(f"Accuracy on people it has never seen  : {accuracy(y[test_idx], pred):.3f}")
 """)
 md("""
 The forest scores 100% on its own training windows because it has effectively **memorised** them (overfitting). On new people it scores
@@ -437,7 +423,7 @@ md("""
 ## Summary
 
 * Cleaned 1,019,496 readings into 25,230 labelled 4-second windows with 32 features each.
-* The models are our own NumPy code (`mlengine/models.py`) and match scikit-learn's versions within a fraction of a point.
+* No machine-learning library is used: the models (`mlengine/models.py`) and the splitting and scoring (`mlengine/evaluation.py`) are our own NumPy code. During development they matched scikit-learn's versions within 0.003.
 * Tested on people the model had never seen: about **85% accuracy** and **0.778 macro F1**, against 39% and 0.09 for the baseline.
 * The weak spot is Downstairs; the fall rule is a transparent, unvalidated first step.
 * Reproduce anywhere: `pip install -r requirements.txt`, then `python -m mlengine.train` and `python -m mlengine.demo`.

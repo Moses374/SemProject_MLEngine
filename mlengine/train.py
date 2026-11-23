@@ -1,21 +1,17 @@
 """Train and evaluate activity classifiers with a subject-wise split.
 
-Needs only numpy and scikit-learn (joblib comes with scikit-learn). Plots are made by reports/build_report.py.
+Needs only numpy and joblib: the models are in models.py and the splitting and scoring in evaluation.py.
+Plots are made by reports/build_report.py.
 """
 import json
 import os
 
 import joblib
 import numpy as np
-from sklearn.ensemble import RandomForestClassifier
-from sklearn.linear_model import LogisticRegression
-from sklearn.metrics import accuracy_score, classification_report, f1_score
-from sklearn.model_selection import GroupKFold, GroupShuffleSplit
-from sklearn.pipeline import make_pipeline
-from sklearn.preprocessing import StandardScaler
 
 from .data import load_raw
 from .describe import main as describe_models
+from .evaluation import accuracy, classification_report, group_kfold, group_shuffle_split, macro_f1
 from .features import build_dataset
 from .models import MajorityClassifier, RandomForest, SoftmaxRegression
 
@@ -30,33 +26,20 @@ def main(out_models="models", out_reports="reports"):
     print(f"{len(X)} windows, {X.shape[1]} features, {len(set(groups))} subjects")
 
     # Hold out whole subjects so we measure generalisation to unseen people.
-    tr, te = next(GroupShuffleSplit(n_splits=1, test_size=0.25, random_state=SEED).split(X, y, groups))
+    tr, te = group_shuffle_split(groups, test_size=0.25, seed=SEED)
     # Our own implementations (mlengine/models.py); the best of these is saved and deployed.
     models = {
         "baseline (majority)": MajorityClassifier(),
         "logistic regression": SoftmaxRegression(),
         "random forest": RandomForest(n_estimators=300, random_state=SEED, class_weight="balanced"),
     }
-    # The same models from scikit-learn, trained only as a reference to check ours against.
-    references = {
-        "logistic regression": make_pipeline(StandardScaler(), LogisticRegression(max_iter=2000)),
-        "random forest": RandomForestClassifier(n_estimators=300, n_jobs=-1, random_state=SEED,
-                                                class_weight="balanced"),
-    }
-
-    def evaluate(m):
-        m.fit(X[tr], y[tr])
-        pred = m.predict(X[te])
-        return {"accuracy": accuracy_score(y[te], pred), "macro_f1": f1_score(y[te], pred, average="macro")}
 
     results = {}
     for name, m in models.items():
-        results[name] = evaluate(m)
-        print(f"{name:45s} acc={results[name]['accuracy']:.3f} macroF1={results[name]['macro_f1']:.3f}")
-    for name, m in references.items():
-        key = f"{name} (scikit-learn reference)"
-        results[key] = evaluate(m)
-        print(f"{key:45s} acc={results[key]['accuracy']:.3f} macroF1={results[key]['macro_f1']:.3f}")
+        m.fit(X[tr], y[tr])
+        pred = m.predict(X[te])
+        results[name] = {"accuracy": accuracy(y[te], pred), "macro_f1": macro_f1(y[te], pred)}
+        print(f"{name:22s} acc={results[name]['accuracy']:.3f} macroF1={results[name]['macro_f1']:.3f}")
 
     best_name = max(models, key=lambda k: results[k]["macro_f1"])
     best = models[best_name]
@@ -64,9 +47,9 @@ def main(out_models="models", out_reports="reports"):
     print(f"\nBest: {best_name}\n{report}")
 
     cv = []
-    for cv_tr, cv_te in GroupKFold(n_splits=5).split(X, y, groups):
+    for cv_tr, cv_te in group_kfold(groups, n_splits=5):
         rf = RandomForest(n_estimators=150, random_state=SEED, class_weight="balanced").fit(X[cv_tr], y[cv_tr])
-        cv.append(f1_score(y[cv_te], rf.predict(X[cv_te]), average="macro"))
+        cv.append(macro_f1(y[cv_te], rf.predict(X[cv_te])))
     cv = np.array(cv)
     results["random forest 5-fold subject-wise CV"] = {"macro_f1_mean": cv.mean(), "macro_f1_std": cv.std()}
     print(f"RF 5-fold subject-wise CV macro-F1: {cv.mean():.3f} +/- {cv.std():.3f}")

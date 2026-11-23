@@ -1,7 +1,7 @@
-# Core engine: training, prediction and the live demo need only these.
-# Versions are pinned to the ones the report and slides were produced with, so retraining
-# reproduces the same numbers (newer scikit-learn versions grow slightly different forests).
-# (joblib, used to save the model, is installed with scikit-learn; the demo server,
-#  file parsing and downloads use the Python standard library.)
+# Core engine: training, prediction and the live demo need only these two libraries.
+# The models, the train/test splitting and the scoring are all our own code (mlengine/models.py and
+# mlengine/evaluation.py); numpy does the maths and joblib trains the trees in parallel and saves the models.
+# The demo server, file parsing and downloads use the Python standard library.
+# Versions are the ones the results were produced with.
 numpy==2.3.3
-scikit-learn==1.7.2
+joblib==1.5.2
