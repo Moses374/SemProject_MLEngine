@@ -141,7 +141,7 @@
       "title": "A decision tree: twenty questions",
       "presenter": "Collins",
       "on_slide": "A real decision tree from our model, drawn two levels deep, with the question at each step.",
-      "say": "Now let us look inside the model. A decision tree is like a game of twenty questions. This is the top of a real tree from our trained model, not a drawing we made up. The first question is: how much does the phone's up-and-down reading wiggle? That feature is called y_mad. If it wiggles very little, the person is barely moving, and the next question separates sitting from standing, using the highest up-and-down reading. In the training data that branch was 100 percent sitting for one group and 93 percent standing for the other. If it wiggles a lot, the next question looks at the vibration energy. Low energy leads to a mixed group where downstairs is only 33 percent, so the real tree keeps asking more questions further down. High energy leads to jogging, 88 percent pure. Two things to remember. First, nobody chose these questions. The training algorithm tried many questions and kept the ones that best split the labelled examples. Second, a real tree is much deeper than this picture: on average about 26 levels and about 940 end points. We only show the top.",
+      "say": "Now let us look inside the model. A decision tree is like a game of twenty questions. This is the top of a real tree from our trained model, not a drawing we made up. The first question is: how much does the phone's up-and-down reading wiggle? That feature is called y_mad. If it wiggles very little, the person is barely moving, and the next question separates sitting from standing, using the highest up-and-down reading. In the training data that branch was 100 percent sitting for one group and 93 percent standing for the other. If it wiggles a lot, the next question looks at the vibration energy. Low energy leads to a mixed group where downstairs is only 33 percent, so the real tree keeps asking more questions further down. High energy leads to jogging, 88 percent pure. Two things to remember. First, nobody chose these questions. The training algorithm tried many questions and kept the ones that best split the labelled examples. Second, a real tree is much deeper than this picture: on average more than 25 levels, with around a thousand end points each. We only show the top.",
       "handoff": ""
     },
     {
@@ -190,7 +190,7 @@
       "title": "Under the hood",
       "presenter": "Moses",
       "on_slide": "A table of the code files and what each does, plus key facts about the saved model and the demo's backend.",
-      "say": "This slide is for anyone who wants to know what is actually running behind the demo. The code is a small Python package with five parts: data cleaning, features, training, prediction, and the demo server. The trained model is a file on disk in the models folder. It holds 300 decision trees, about 566,000 decision points in total, which take 22 megabytes. It is not on GitHub because it is large and can be recreated in about a minute with one command. The demo works like this: the page in the browser asks our local Python server for a window of data. The server picks a real recording from people the model never trained on, computes the 32 features, asks the saved model, runs the fall rule, and sends the answer back as JSON. The browser then draws the two phone screens. In a real product, the model would run either on the phone itself or on a small server that receives the sensor data. If asked, we can show the code and run it live.",
+      "say": "This slide is for anyone who wants to know what is actually running behind the demo. The code is a small Python package with five parts: data cleaning, features, training, prediction, and the demo server. The trained model is a file on disk in the models folder. It holds 300 decision trees, roughly 800,000 decision points in total, which take 22 megabytes. It is not on GitHub because it is large and can be recreated in about a minute with one command. The demo works like this: the page in the browser asks our local Python server for a window of data. The server picks a real recording from people the model never trained on, computes the 32 features, asks the saved model, runs the fall rule, and sends the answer back as JSON. The browser then draws the two phone screens. In a real product, the model would run either on the phone itself or on a small server that receives the sensor data. If asked, we can show the code and run it live.",
       "handoff": "Kathy will now cover the limitations."
     },
     {
@@ -281,7 +281,7 @@
     ],
     [
       "What is inside the model file?",
-      "A Python dictionary saved with joblib: the trained random forest (300 trees, about 566,000 nodes) and the list of the 32 feature names in the order the model expects. It is binary, so run python -m mlengine.describe to read it as text (it also saves models/model_summary.txt).",
+      "A Python dictionary saved with joblib: the trained random forest (300 trees, roughly 800,000 nodes) and the list of the 32 feature names in the order the model expects. It is binary, so run python -m mlengine.describe to read it as text (it also saves models/model_summary.txt).",
       "Moses"
     ],
     [

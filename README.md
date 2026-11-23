@@ -53,7 +53,7 @@ python -m mlengine.predict readings.csv  # CSV with x,y,z columns (m/s^2, 20 Hz)
 
 ### Dependencies
 
-The engine is deliberately small. `mlengine/` needs only **numpy** (arrays and the FFT) and **scikit-learn** (the models; it also provides `joblib`, used to save them). Everything else is the Python standard library: file parsing, the demo's web server and the download. `pandas`, `matplotlib`, `reportlab` and `jupyter` are only for the optional extras (the Deliverable 1 notebook and the report/guide builders) and are listed separately in `requirements-extras.txt`.
+The engine is deliberately small. `mlengine/` needs only **numpy** (arrays and the FFT) and **scikit-learn** (the models; it also provides `joblib`, used to save them). Everything else is the Python standard library: file parsing, the demo's web server and the download. The two versions are pinned in `requirements.txt` on purpose: with newer scikit-learn releases the same random seed grows slightly different forests (we measured 81.7% instead of 84.9% accuracy), so unpinned installs would not reproduce the numbers in the report. `pandas`, `matplotlib`, `reportlab` and `jupyter` are only for the optional extras (the Deliverable 1 notebook and the report/guide builders) and are listed separately in `requirements-extras.txt`.
 
 ### Looking inside the saved models
 

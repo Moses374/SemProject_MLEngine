@@ -1,5 +1,7 @@
 # Core engine: training, prediction and the live demo need only these.
-# (joblib, used to save the model, is installed with scikit-learn;
-#  the demo server, file parsing and downloads use the Python standard library.)
-numpy
-scikit-learn
+# Versions are pinned to the ones the report and slides were produced with, so retraining
+# reproduces the same numbers (newer scikit-learn versions grow slightly different forests).
+# (joblib, used to save the model, is installed with scikit-learn; the demo server,
+#  file parsing and downloads use the Python standard library.)
+numpy==2.3.3
+scikit-learn==1.7.2
