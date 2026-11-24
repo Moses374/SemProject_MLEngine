@@ -1,0 +1,44 @@
+{
+  "train_windows": 18704,
+  "test_windows": 6526,
+  "train_accuracy": 1.0,
+  "test_accuracy": 0.8504443763407907,
+  "n_trees": 300,
+  "n_features": 32,
+  "avg_depth": 25.803333333333335,
+  "avg_leaves": 878.3833333333333,
+  "total_nodes": 526730,
+  "fit_seconds_300_trees": 19.89262700000836,
+  "model_file_mb_27_subjects": 10.425886,
+  "ms_per_prediction": 71.00243499997305,
+  "tree_root": "y_mad <= 1.15 ?",
+  "tree_top": {
+    "root": "y_mad <= 1.15 ?",
+    "left": "x_min <= 3.49 ?",
+    "right": "y_std <= 6.45 ?",
+    "leaves": [
+      "mostly Standing (66% of 1,567 windows)",
+      "Sitting (end point: 499 windows)",
+      "mostly Downstairs (33% of 11,393 windows)",
+      "mostly Jogging (87% of 5,245 windows)"
+    ]
+  },
+  "votes": {
+    "Real Walking window": {
+      "Downstairs": 87,
+      "Jogging": 0,
+      "Sitting": 0,
+      "Standing": 0,
+      "Upstairs": 38,
+      "Walking": 175
+    },
+    "Real Downstairs window": {
+      "Downstairs": 75,
+      "Jogging": 0,
+      "Sitting": 0,
+      "Standing": 0,
+      "Upstairs": 114,
+      "Walking": 111
+    }
+  }
+}
